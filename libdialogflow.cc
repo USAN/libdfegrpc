@@ -1,0 +1,616 @@
+#include <iostream>
+#include <vector>
+#include <string>
+#include <cstdarg>
+#include <cstring>
+#include <thread>
+#include <mutex>
+#include <fstream>
+#include <iostream>
+
+#include "libdialogflow.h"
+#include "libdialogflow_internal.h"
+
+#include <grpc/grpc.h>
+#include <grpc/support/log.h>
+#include <grpcpp/channel.h>
+#include <grpcpp/client_context.h>
+#include <grpcpp/create_channel.h>
+#include <grpcpp/security/credentials.h>
+
+#include <google/cloud/dialogflow/v2beta1/session.grpc.pb.h>
+
+#include <google/cloud/texttospeech/v1beta1/cloud_tts.grpc.pb.h>
+
+using grpc::Channel;
+using grpc::ClientContext;
+using grpc::ClientReader;
+using grpc::ClientReaderWriter;
+using grpc::ClientReaderWriterInterface;
+using grpc::ClientWriter;
+using grpc::Status;
+using google::cloud::dialogflow::v2beta1::Sessions;
+using google::cloud::dialogflow::v2beta1::StreamingDetectIntentResponse;
+using google::cloud::dialogflow::v2beta1::StreamingDetectIntentRequest;
+using google::cloud::dialogflow::v2beta1::DetectIntentResponse;
+using google::cloud::dialogflow::v2beta1::DetectIntentRequest;
+using google::cloud::dialogflow::v2beta1::QueryResult;
+
+using google::cloud::texttospeech::v1beta1::TextToSpeech;
+using google::cloud::texttospeech::v1beta1::SynthesizeSpeechRequest;
+using google::cloud::texttospeech::v1beta1::SynthesizeSpeechResponse;
+
+#define LOG_DEBUG   DF_LOG_LEVEL_DEBUG, __FILE__, __LINE__, __PRETTY_FUNCTION__
+#define LOG_INFO    DF_LOG_LEVEL_INFO, __FILE__, __LINE__, __PRETTY_FUNCTION__
+#define LOG_WARNING DF_LOG_LEVEL_WARNING, __FILE__, __LINE__, __PRETTY_FUNCTION__
+#define LOG_ERROR   DF_LOG_LEVEL_ERROR, __FILE__, __LINE__, __PRETTY_FUNCTION__
+
+#define cstrlen_zero(str)   (((str) == nullptr) || ((*str) == '\0'))
+#define cstr_or(str, alt)   (cstrlen_zero(str) ? (alt) : (str))
+
+static void noop_log(enum dialogflow_log_level level, const char *file, int line, const char *function, const char *fmt, va_list args)
+{
+}
+
+static DF_LOG_FUNC parent_df_log = noop_log;
+
+static void df_log(enum dialogflow_log_level level, const char *file, int line, const char *function, const char *fmt, ...)
+{
+    va_list args;
+    va_start(args, fmt);
+    parent_df_log(level, file, line, function, fmt, args);
+    va_end(args);
+}
+
+static void wrapper_grpc_log(gpr_log_func_args *args)
+{
+    enum dialogflow_log_level df_level = args->severity == GPR_LOG_SEVERITY_DEBUG ? DF_LOG_LEVEL_DEBUG :
+                                        args->severity == GPR_LOG_SEVERITY_INFO ? DF_LOG_LEVEL_INFO :
+                                            DF_LOG_LEVEL_ERROR;
+    df_log(df_level, args->file, args->line, "grpc", "%s\n", args->message);
+}
+
+
+int df_init(DF_LOG_FUNC log_function)
+{
+    grpc_init();
+    parent_df_log = log_function;
+    gpr_set_log_function(wrapper_grpc_log);
+    gpr_set_log_verbosity(GPR_LOG_SEVERITY_DEBUG);
+    return 0;
+}
+
+static std::shared_ptr<Channel> create_grpc_channel(const char *endpoint, const char *auth_key)
+{
+    std::shared_ptr<grpc::ChannelCredentials> creds;
+
+    if (!cstrlen_zero(auth_key)) {
+        auto svcAcct = grpc::ServiceAccountJWTAccessCredentials(auth_key, 3600);
+        if (svcAcct == nullptr) {
+            df_log(LOG_ERROR, "Service account credentials failed to load, will attempt to use default credentials.\n");
+            creds = grpc::GoogleDefaultCredentials();
+        } else {
+            creds = grpc::CompositeChannelCredentials(grpc::SslCredentials(grpc::SslCredentialsOptions()), svcAcct);
+        }
+    } else {
+        creds = grpc::GoogleDefaultCredentials();
+    }
+
+    df_log(LOG_INFO, "Creating DF session to %s\n", endpoint);
+
+    return grpc::CreateChannel(endpoint, creds);
+}
+
+struct dialogflow_session *df_create_session(const char *endpoint, const char *auth_key)
+{
+    struct dialogflow_session *session = new dialogflow_session();
+    
+    if (session == nullptr) {
+        df_log(LOG_ERROR, "Failed to create session object\n");
+        return nullptr;
+    }
+
+    if (cstrlen_zero(endpoint)) {
+        endpoint = "dialogflow.googleapis.com";
+    }
+
+    session->channel = create_grpc_channel(endpoint, auth_key);
+    if (session->channel == nullptr) {
+        df_log(LOG_ERROR, "Failed to create channel to %s\n", endpoint);
+        delete session;
+        return nullptr;
+    }
+
+    session->state = DF_STATE_READY;
+    session->auth_key = auth_key;
+    session->endpoint = endpoint;
+    session->session = std::move(Sessions::NewStub(session->channel));
+
+    df_log(LOG_DEBUG, "Channel to %s created\n", endpoint);
+
+    return session;
+}
+
+int df_close_session(struct dialogflow_session *session)
+{
+    session->lock.lock();
+    df_log(LOG_DEBUG, "Destroying channel to %s for %s\n", session->endpoint.c_str(), session->session_id.c_str());
+
+    session->lock.unlock();
+    delete session;
+
+    return 0;
+}
+
+int df_set_session_id(struct dialogflow_session *session, const char *session_id)
+{
+    std::lock_guard<std::mutex> lock(session->lock);
+    session->session_id = session_id;
+    return 0;
+}
+
+const char *df_get_session_id(struct dialogflow_session *session)
+{
+    std::lock_guard<std::mutex> lock(session->lock);
+    return session->session_id.c_str();
+}
+
+int df_set_project_id(struct dialogflow_session *session, const char *project_id)
+{
+    std::lock_guard<std::mutex> lock(session->lock);
+    session->project_id = project_id;
+    return 0;
+}
+
+const char *df_get_project_id(struct dialogflow_session *session)
+{
+    std::lock_guard<std::mutex> lock(session->lock);
+    return session->project_id.c_str();
+}
+
+static std::string format(const std::string& format, ...)
+{
+    va_list args;
+    va_start (args, format);
+    size_t len = std::vsnprintf(NULL, 0, format.c_str(), args);
+    va_end (args);
+    std::vector<char> vec(len + 1);
+    va_start (args, format);
+    std::vsnprintf(&vec[0], len + 1, format.c_str(), args);
+    va_end (args);
+    return &vec[0];
+}
+
+static void make_query_result_responses(struct dialogflow_session *session, const QueryResult &query_result, int score)
+{
+    session->results.push_back(std::unique_ptr<df_result>(new df_result("query_text", query_result.query_text(), score)));
+    session->results.push_back(std::unique_ptr<df_result>(new df_result("language_code", query_result.language_code(), score)));
+    session->results.push_back(std::unique_ptr<df_result>(new df_result("action", query_result.action(), score)));
+    session->results.push_back(std::unique_ptr<df_result>(new df_result("fulfillment_text", query_result.fulfillment_text(), score)));
+    session->results.push_back(std::unique_ptr<df_result>(new df_result("intent_name", query_result.intent().name(), score)));
+    session->results.push_back(std::unique_ptr<df_result>(new df_result("intent_display_name", query_result.intent().display_name(), score)));
+    session->results.push_back(std::unique_ptr<df_result>(new df_result("intent_detection_confidence", format("%f", query_result.intent_detection_confidence()), score)));
+
+    int msgs = query_result.fulfillment_messages_size();
+    for (int i = 0; i < msgs; i++) {
+        const ::google::cloud::dialogflow::v2beta1::Intent_Message& msg = query_result.fulfillment_messages(i);
+        if (msg.has_text()) {
+            int texts = msg.text().text_size();
+            for (int j = 0; j < texts; j++) {
+                session->results.push_back(std::unique_ptr<df_result>(new df_result(format("fulfillment_message_%d_text_%d", i, j), msg.text().text(j), score)));
+            }
+        } else if (msg.has_simple_responses()) {
+            int rspns = msg.simple_responses().simple_responses_size();
+            for (int j = 0; j < rspns; j++) {
+                const std::string& tts = msg.simple_responses().simple_responses(j).text_to_speech();
+                const std::string& ssml = msg.simple_responses().simple_responses(j).ssml();
+
+                session->results.push_back(std::unique_ptr<df_result>(new df_result(format("fulfillment_message_%d_simple_response_%d", i, j),
+                    tts.length() ? tts : ssml, score)));
+            }
+        } else if (msg.has_telephony_play_audio()) {
+            session->results.push_back(std::unique_ptr<df_result>(new df_result(format("fulfillment_message_%d_telephony_play_audio", i),
+                msg.telephony_play_audio().audio_uri(), score)));
+        } else if (msg.has_telephony_synthesize_speech()) {
+            const std::string& tts = msg.telephony_synthesize_speech().text();
+            const std::string& ssml = msg.telephony_synthesize_speech().ssml();
+            session->results.push_back(std::unique_ptr<df_result>(new df_result(format("fulfillment_message_%d_telephony_synthesize_speech", i),
+                tts.length() ? tts : ssml, score)));
+        } else if (msg.has_telephony_transfer_call()) {
+            session->results.push_back(std::unique_ptr<df_result>(new df_result(format("fulfillment_message_%d_telephony_transfer_call", i),
+                msg.telephony_transfer_call().phone_number(), score)));
+        } else if (msg.has_telephony_terminate_call()) {
+            session->results.push_back(std::unique_ptr<df_result>(new df_result(format("fulfillment_message_%d_telephony_terminate_call", i),
+                "true", score)));
+        }
+    }
+}
+
+template<typename T> static void make_audio_result(struct dialogflow_session *session, T& response, int score)
+{
+    if (response.output_audio().length() > 0) {
+        const char *audio = response.output_audio().c_str();
+        if (!strncmp(audio, "RIFF", 4)) {
+            /* looks like a wave file */
+            int32_t chunkSize = *((int32_t*)(audio + 4));
+            if (chunkSize > 0) {
+                /* so far so good */
+                try {
+                    /* verify the array is valid... */
+                    char a = audio[chunkSize + 8 - 1];
+                    a = a; /* prevent the compiler complaining about the unused variable */
+                    session->results.push_back(std::unique_ptr<df_result>(new df_result("output_audio", audio, chunkSize + 8, score)));
+                } catch (const std::exception& e) {
+                    df_log(LOG_WARNING, "Got exception poking end of audio array for output_audio for %s\n", session->session_id.c_str());
+                }
+            } else {
+                df_log(LOG_WARNING, "Got output_audio for %s with a non-positive RIFF chunk size - %d", session->session_id.c_str(), chunkSize);
+            }
+        } else {
+            df_log(LOG_WARNING, "Got output_audio for %s without a RIFF header\n", session->session_id.c_str());
+        }
+    }
+}
+
+static void make_streaming_responses(struct dialogflow_session *session, std::shared_ptr<StreamingDetectIntentResponse> response)
+{
+    /* a standard final response has:
+        response_id
+        query_result.query_text (with score)
+        query_result.language_code
+        query_result.action
+        query_result.fulfillment_text
+        query_result.intent.name
+        query_result.intent.display_name
+        
+        some number of:
+        query_result.fulfillment_messages
+    */
+    int score = int(response->query_result().intent_detection_confidence() * 100);
+    session->results.clear();
+    session->results.push_back(std::unique_ptr<df_result>(new df_result("response_id", response->response_id(), score)));
+    
+    if (session->audio_response) {
+        make_audio_result<StreamingDetectIntentResponse>(session, *session->audio_response, score);
+    }
+    make_query_result_responses(session, response->query_result(), score);
+}
+
+static void make_synchronous_responses(struct dialogflow_session *session, DetectIntentResponse& response)
+{
+    int score = int(response.query_result().intent_detection_confidence() * 100);
+    session->results.clear();
+    session->results.push_back(std::unique_ptr<df_result>(new df_result("response_id", response.response_id(), score)));
+    
+    make_audio_result<DetectIntentResponse>(session, response, score);
+    make_query_result_responses(session, response.query_result(), score);
+}
+
+int df_recognize_event(struct dialogflow_session *session, const char *event, const char *language)
+{
+    std::unique_lock<std::mutex> lock(session->lock);
+
+    if (session->state != DF_STATE_READY) {
+        lock.unlock();
+        df_stop_recognition(session);
+        lock.lock();
+    }
+
+    if (cstrlen_zero(language)) {
+        language = "en";
+    }
+
+    std::string session_path = format("projects/%s/agent/sessions/%s", session->project_id.c_str(), session->session_id.c_str());
+
+    df_log(LOG_DEBUG, "Session %s performing event recognition on %s\n", session->session_id.c_str(), session_path.c_str());
+
+    DetectIntentRequest request;
+    DetectIntentResponse response;
+    ClientContext context;
+
+    request.set_session(session_path);
+    request.mutable_output_audio_config()->set_audio_encoding(google::cloud::dialogflow::v2beta1::OutputAudioEncoding::OUTPUT_AUDIO_ENCODING_LINEAR_16);
+    request.mutable_output_audio_config()->set_sample_rate_hertz(8000);
+    request.mutable_query_input()->mutable_event()->set_name(event);
+    request.mutable_query_input()->mutable_event()->set_language_code(language);
+
+    if (session->debug) {
+        df_log(LOG_DEBUG, "REQUEST: %s\n", request.ShortDebugString().c_str());
+    }
+
+    Status status = session->session->DetectIntent(&context, request, &response);
+    if (!status.ok()) {
+        df_log(LOG_WARNING, "Session %s got error performing event detection on %s: %s (%d: %s)\n", session->session_id.c_str(), session->project_id.c_str(),
+            status.error_message().c_str(), status.error_code(), status.error_details().c_str());
+        session->state = DF_STATE_READY;
+        return -1;
+    }
+
+    if (session->debug) {
+        df_log(LOG_DEBUG, "RESPONSE: %s\n", response.ShortDebugString().c_str());
+    }
+
+    make_synchronous_responses(session, response);
+    session->responsesReceived = 1;
+
+    session->state = DF_STATE_READY;
+
+    return 0;
+}
+
+static void df_read_exec(struct dialogflow_session *session)
+{
+    StreamingDetectIntentResponse response;
+    bool debug;
+
+    std::unique_lock<std::mutex> lock(session->lock);
+    std::string sessionId(session->session_id);
+    std::shared_ptr<ClientReaderWriterInterface<StreamingDetectIntentRequest, StreamingDetectIntentResponse>> 
+        current_request(session->current_request);
+    debug = session->debug;
+    lock.unlock();
+    while (current_request->Read(&response)) {
+        lock.lock();
+        session->responsesReceived++;
+        debug = session->debug;
+        lock.unlock();
+        if (debug) {
+            df_log(LOG_DEBUG, "RESPONSE: %s\n", response.ShortDebugString().c_str());
+        }
+        if (response.has_query_result()) {
+            // this is the final response
+            df_log(LOG_DEBUG, "Got final response '%s' (\"%s\" / \"%s\") for %s\n", 
+                response.query_result().intent().display_name().c_str(),
+                response.query_result().query_text().c_str(),
+                response.query_result().fulfillment_text().c_str(),
+                sessionId.c_str());
+            grpc::string audio = response.output_audio();
+            if (audio.length() > 0) {
+                df_log(LOG_DEBUG, "Final response has audio\n");
+            }
+            if (response.has_output_audio_config()) {
+                df_log(LOG_DEBUG, "Final response has audio config\n");
+            }
+            lock.lock();
+            session->final_response = std::make_shared<StreamingDetectIntentResponse>(response);
+            lock.unlock();
+        } else if (response.has_recognition_result()) {
+            if (response.recognition_result().message_type() == 
+                google::cloud::dialogflow::v2beta1::StreamingRecognitionResult_MessageType::
+                StreamingRecognitionResult_MessageType_END_OF_SINGLE_UTTERANCE) {
+                df_log(LOG_DEBUG, "Got end of single utterance event for %s\n",
+                    sessionId.c_str());
+            } else {
+                df_log(LOG_DEBUG, "Got interim response '%s' for %s\n",
+                    response.recognition_result().transcript().c_str(),
+                    sessionId.c_str());
+                if (response.output_audio().length() > 0) {
+                    df_log(LOG_DEBUG, "Interim response has audio\n");
+                }
+                if (response.has_output_audio_config()) {
+                    df_log(LOG_DEBUG, "Interim response has audio config\n");
+                }
+            }
+        } else if (response.output_audio().length() == 0) { /* don't complain if it's got an audio bit */
+            df_log(LOG_DEBUG, "Got unexpected response packet for %s\n", sessionId.c_str());
+        }
+        if (response.output_audio().length() > 0) { /* but have this outside the if/else clause in case it comes on another packet */
+            df_log(LOG_DEBUG, "Got response with audio for %s\n", sessionId.c_str());
+            lock.lock();
+            session->audio_response = std::make_shared<StreamingDetectIntentResponse>(response);
+            lock.unlock();
+        } 
+    }
+
+    lock.lock();
+    make_streaming_responses(session, session->final_response);
+    if (session->state != DF_STATE_ERROR) {
+        session->state = DF_STATE_FINISHED;
+    }
+    
+    return;
+}
+
+int df_start_recognition(struct dialogflow_session *session, const char *language)
+{
+    std::unique_lock<std::mutex> lock(session->lock);
+
+    if (session->state == DF_STATE_STARTED) {
+        lock.unlock();
+        df_stop_recognition(session);
+        lock.lock();
+    }
+
+    std::string session_path = format("projects/%s/agent/sessions/%s", session->project_id.c_str(), session->session_id.c_str());
+
+    df_log(LOG_DEBUG, "Session %s starting recognition to %s\n", session->session_id.c_str(), session_path.c_str());
+   
+    /* it didn't like assigning this to the session structure location */
+    session->context.reset(new ClientContext());
+    session->current_request = std::move(session->session->StreamingDetectIntent(session->context.get()));
+
+    StreamingDetectIntentRequest request;
+    request.set_session(session_path);
+    request.set_single_utterance(true);
+    request.mutable_query_input()->mutable_audio_config()->set_audio_encoding(google::cloud::dialogflow::v2beta1::AUDIO_ENCODING_MULAW);
+    request.mutable_query_input()->mutable_audio_config()->set_sample_rate_hertz(8000);
+    request.mutable_query_input()->mutable_audio_config()->set_language_code(cstr_or(language, "en"));
+    request.mutable_output_audio_config()->set_audio_encoding(google::cloud::dialogflow::v2beta1::OutputAudioEncoding::OUTPUT_AUDIO_ENCODING_LINEAR_16);
+    request.mutable_output_audio_config()->set_sample_rate_hertz(8000);
+
+    if (!session->current_request->Write(request)) {
+        df_log(LOG_WARNING, "Session %s got error writing initial data packet to %s\n", session->session_id.c_str(), session->project_id.c_str());
+        session->state = DF_STATE_ERROR;
+        return -1;
+    }
+    if (session->debug) {
+        df_log(LOG_DEBUG, "REQUEST: %s\n", request.ShortDebugString().c_str());
+    }
+
+    session->state = DF_STATE_STARTED;
+    session->bytesWritten = 0;
+    session->packetsWritten = 0;
+    session->responsesReceived = 0;
+
+    session->read_thread = std::thread(df_read_exec, session);
+
+    return 0;
+}
+
+int df_stop_recognition(struct dialogflow_session *session)
+{
+    std::unique_lock<std::mutex> lock(session->lock);
+    df_log(LOG_DEBUG, "Session %s stopping recognition to %s\n", session->session_id.c_str(), session->project_id.c_str());
+
+    if (session->state != DF_STATE_READY) {
+        session->current_request->WritesDone();
+
+        lock.unlock();
+        session->read_thread.join();
+        lock.lock();
+
+        Status status = session->current_request->Finish();
+        if (!status.ok()) {
+            df_log(LOG_WARNING, "Session %s got error performing streaming detection on %s: %s (%d: %s)\n", session->session_id.c_str(), session->project_id.c_str(),
+                status.error_message().c_str(), status.error_code(), status.error_details().c_str());
+        }
+    }
+    session->state = DF_STATE_READY;
+    return 0;
+}
+
+enum dialogflow_session_state df_write_audio(struct dialogflow_session *session, const char *samples, size_t sample_count)
+{
+    std::unique_lock<std::mutex> lock(session->lock);
+    enum dialogflow_session_state state;
+
+    state = session->state;
+    lock.unlock();
+
+    if (state != DF_STATE_STARTED) {
+        return state;
+    }
+
+    StreamingDetectIntentRequest request;
+    request.set_input_audio(samples, sample_count);
+
+#ifdef DF_LOG_WRITES
+    static int logcount = 0;
+    if (++logcount % 50 == 1) {
+        df_log(LOG_DEBUG, "Session %s writing %d bytes audio...\n", session->session_id.c_str(),
+            (int) sample_count);
+    }
+#endif
+
+    lock.lock();
+    if (!session->current_request->Write(request)) {
+        df_log(LOG_WARNING, "Session %s got error writing audio data packet to %s\n", session->session_id.c_str(), session->project_id.c_str());
+        state = session->state = DF_STATE_ERROR;
+    }
+    if (session->debug) {
+        lock.unlock();
+        df_log(LOG_DEBUG, "REQUEST: %s\n", request.ShortDebugString().c_str());
+    } else {
+        lock.unlock();
+    }
+    
+    return state;
+}
+
+enum dialogflow_session_state df_get_state(struct dialogflow_session *session)
+{
+    std::lock_guard<std::mutex> lock(session->lock);
+
+    return session->state;
+}
+
+int df_get_rpc_state(struct dialogflow_session *session)
+{
+    std::lock_guard<std::mutex> lock(session->lock);
+
+    return int(session->channel->GetState(false));
+}
+
+int df_get_result_count(struct dialogflow_session *session)
+{
+    std::lock_guard<std::mutex> lock(session->lock);
+
+    return session->results.size();
+}
+
+struct dialogflow_result *df_get_result(struct dialogflow_session *session, int number)
+{
+    std::lock_guard<std::mutex> lock(session->lock);
+    struct dialogflow_result *result = nullptr;
+
+    if (number >= 0 && number < int(session->results.size())) {
+        result = &(session->results[number]->result);
+    }
+
+    return result;
+}
+
+int df_get_response_count(struct dialogflow_session *session)
+{
+    std::lock_guard<std::mutex> lock(session->lock);
+    return session->responsesReceived;
+}
+
+void df_set_debug(struct dialogflow_session *session, int debug)
+{
+    std::lock_guard<std::mutex> lock(session->lock);
+    session->debug = (debug != 0);
+}
+
+int google_synth_speech(const char *endpoint, const char *svc_key, const char *text, const char *language, const char *voice_name, const char *destination_filename)
+{
+    if (cstrlen_zero(endpoint)) {
+        endpoint = "texttospeech.googleapis.com";
+    }
+
+    std::shared_ptr<Channel> channel = create_grpc_channel(endpoint, svc_key);
+    
+    if (channel == nullptr) {
+        df_log(LOG_ERROR, "Failed to create synthesis channel to %s\n", endpoint);
+        return -1;
+    }
+
+    std::unique_ptr<TextToSpeech::Stub> tts = TextToSpeech::NewStub(channel);
+
+    std::string strText(text);
+    
+    SynthesizeSpeechRequest request;
+    SynthesizeSpeechResponse response;
+    ClientContext context;
+
+    if (strText.find("<speak") != std::string::npos) {
+        request.mutable_input()->set_text(strText);
+    } else {
+        request.mutable_input()->set_ssml(strText);
+    }
+    request.mutable_voice()->set_language_code(cstr_or(language, "en"));
+    if (!cstrlen_zero(voice_name)) {
+        request.mutable_voice()->set_name(voice_name);
+    }
+    request.mutable_audio_config()->set_audio_encoding(google::cloud::texttospeech::v1beta1::AudioEncoding::LINEAR16);
+    request.mutable_audio_config()->set_sample_rate_hertz(8000);
+
+    Status status = tts->SynthesizeSpeech(&context, request, &response);
+    if (!status.ok()) {
+        df_log(LOG_WARNING, "Speech synthesis failed: %s (%d)\n", status.error_message().c_str(), status.error_code());
+        df_log(LOG_DEBUG, "Error details: %s\n", status.error_details().c_str());
+        return -1;
+    }
+
+    const std::string& audio = response.audio_content();
+
+    if (audio.length() == 0) {
+        df_log(LOG_WARNING, "Got 0 bytes of audio back from synthesis call\n");
+    }
+
+    std::ofstream wavefile(destination_filename, std::ofstream::binary);
+    wavefile.write(audio.c_str(), sizeof(char) * audio.length());
+    /* will auto-close */
+
+    return 0;
+}

@@ -1,0 +1,260 @@
+GRPC_CPP_PLUGIN=$(shell which grpc_cpp_plugin)
+PROTOS= protos/google/api/annotations.proto protos/google/api/auth.proto protos/google/api/backend.proto protos/google/api/billing.proto protos/google/api/config_change.proto protos/google/api/consumer.proto protos/google/api/context.proto protos/google/api/control.proto protos/google/api/distribution.proto protos/google/api/documentation.proto protos/google/api/endpoint.proto protos/google/api/experimental/authorization_config.proto protos/google/api/experimental/experimental.proto protos/google/api/http.proto protos/google/api/httpbody.proto protos/google/api/label.proto protos/google/api/log.proto protos/google/api/logging.proto protos/google/api/metric.proto protos/google/api/monitored_resource.proto protos/google/api/monitoring.proto protos/google/api/quota.proto protos/google/api/service.proto protos/google/api/servicecontrol/v1/check_error.proto protos/google/api/servicecontrol/v1/distribution.proto protos/google/api/servicecontrol/v1/log_entry.proto protos/google/api/servicecontrol/v1/metric_value.proto protos/google/api/servicecontrol/v1/operation.proto protos/google/api/servicecontrol/v1/quota_controller.proto protos/google/api/servicecontrol/v1/service_controller.proto protos/google/api/servicemanagement/v1/resources.proto protos/google/api/servicemanagement/v1/servicemanager.proto protos/google/api/source_info.proto protos/google/api/system_parameter.proto protos/google/api/usage.proto protos/google/cloud/dialogflow/v2beta1/agent.proto protos/google/cloud/dialogflow/v2beta1/audio_config.proto protos/google/cloud/dialogflow/v2beta1/context.proto protos/google/cloud/dialogflow/v2beta1/document.proto protos/google/cloud/dialogflow/v2beta1/entity_type.proto protos/google/cloud/dialogflow/v2beta1/intent.proto protos/google/cloud/dialogflow/v2beta1/knowledge_base.proto protos/google/cloud/dialogflow/v2beta1/session.proto protos/google/cloud/dialogflow/v2beta1/session_entity_type.proto protos/google/cloud/dialogflow/v2beta1/webhook.proto protos/google/cloud/texttospeech/v1/cloud_tts.proto protos/google/cloud/texttospeech/v1beta1/cloud_tts.proto protos/google/logging/type/http_request.proto protos/google/logging/type/log_severity.proto protos/google/logging/v2/logging.proto protos/google/logging/v2/logging_config.proto protos/google/logging/v2/logging_metrics.proto protos/google/logging/v2/log_entry.proto protos/google/longrunning/operations.proto protos/google/rpc/code.proto protos/google/rpc/error_details.proto protos/google/rpc/status.proto protos/google/type/color.proto protos/google/type/date.proto protos/google/type/dayofweek.proto protos/google/type/latlng.proto protos/google/type/money.proto protos/google/type/postal_address.proto protos/google/type/timeofday.proto
+PROTOCCS= protos/google/api/annotations.pb.cc protos/google/api/annotations.grpc.pb.cc protos/google/api/auth.pb.cc protos/google/api/auth.grpc.pb.cc protos/google/api/backend.pb.cc protos/google/api/backend.grpc.pb.cc protos/google/api/billing.pb.cc protos/google/api/billing.grpc.pb.cc protos/google/api/config_change.pb.cc protos/google/api/config_change.grpc.pb.cc protos/google/api/consumer.pb.cc protos/google/api/consumer.grpc.pb.cc protos/google/api/context.pb.cc protos/google/api/context.grpc.pb.cc protos/google/api/control.pb.cc protos/google/api/control.grpc.pb.cc protos/google/api/distribution.pb.cc protos/google/api/distribution.grpc.pb.cc protos/google/api/documentation.pb.cc protos/google/api/documentation.grpc.pb.cc protos/google/api/endpoint.pb.cc protos/google/api/endpoint.grpc.pb.cc protos/google/api/experimental/authorization_config.pb.cc protos/google/api/experimental/authorization_config.grpc.pb.cc protos/google/api/experimental/experimental.pb.cc protos/google/api/experimental/experimental.grpc.pb.cc protos/google/api/http.pb.cc protos/google/api/http.grpc.pb.cc protos/google/api/httpbody.pb.cc protos/google/api/httpbody.grpc.pb.cc protos/google/api/label.pb.cc protos/google/api/label.grpc.pb.cc protos/google/api/log.pb.cc protos/google/api/log.grpc.pb.cc protos/google/api/logging.pb.cc protos/google/api/logging.grpc.pb.cc protos/google/api/metric.pb.cc protos/google/api/metric.grpc.pb.cc protos/google/api/monitored_resource.pb.cc protos/google/api/monitored_resource.grpc.pb.cc protos/google/api/monitoring.pb.cc protos/google/api/monitoring.grpc.pb.cc protos/google/api/quota.pb.cc protos/google/api/quota.grpc.pb.cc protos/google/api/service.pb.cc protos/google/api/service.grpc.pb.cc protos/google/api/servicecontrol/v1/check_error.pb.cc protos/google/api/servicecontrol/v1/check_error.grpc.pb.cc protos/google/api/servicecontrol/v1/distribution.pb.cc protos/google/api/servicecontrol/v1/distribution.grpc.pb.cc protos/google/api/servicecontrol/v1/log_entry.pb.cc protos/google/api/servicecontrol/v1/log_entry.grpc.pb.cc protos/google/api/servicecontrol/v1/metric_value.pb.cc protos/google/api/servicecontrol/v1/metric_value.grpc.pb.cc protos/google/api/servicecontrol/v1/operation.pb.cc protos/google/api/servicecontrol/v1/operation.grpc.pb.cc protos/google/api/servicecontrol/v1/quota_controller.pb.cc protos/google/api/servicecontrol/v1/quota_controller.grpc.pb.cc protos/google/api/servicecontrol/v1/service_controller.pb.cc protos/google/api/servicecontrol/v1/service_controller.grpc.pb.cc protos/google/api/servicemanagement/v1/resources.pb.cc protos/google/api/servicemanagement/v1/resources.grpc.pb.cc protos/google/api/servicemanagement/v1/servicemanager.pb.cc protos/google/api/servicemanagement/v1/servicemanager.grpc.pb.cc protos/google/api/source_info.pb.cc protos/google/api/source_info.grpc.pb.cc protos/google/api/system_parameter.pb.cc protos/google/api/system_parameter.grpc.pb.cc protos/google/api/usage.pb.cc protos/google/api/usage.grpc.pb.cc protos/google/cloud/dialogflow/v2beta1/agent.pb.cc protos/google/cloud/dialogflow/v2beta1/agent.grpc.pb.cc protos/google/cloud/dialogflow/v2beta1/audio_config.pb.cc protos/google/cloud/dialogflow/v2beta1/audio_config.grpc.pb.cc protos/google/cloud/dialogflow/v2beta1/context.pb.cc protos/google/cloud/dialogflow/v2beta1/context.grpc.pb.cc protos/google/cloud/dialogflow/v2beta1/document.pb.cc protos/google/cloud/dialogflow/v2beta1/document.grpc.pb.cc protos/google/cloud/dialogflow/v2beta1/entity_type.pb.cc protos/google/cloud/dialogflow/v2beta1/entity_type.grpc.pb.cc protos/google/cloud/dialogflow/v2beta1/intent.pb.cc protos/google/cloud/dialogflow/v2beta1/intent.grpc.pb.cc protos/google/cloud/dialogflow/v2beta1/knowledge_base.pb.cc protos/google/cloud/dialogflow/v2beta1/knowledge_base.grpc.pb.cc protos/google/cloud/dialogflow/v2beta1/session.pb.cc protos/google/cloud/dialogflow/v2beta1/session.grpc.pb.cc protos/google/cloud/dialogflow/v2beta1/session_entity_type.pb.cc protos/google/cloud/dialogflow/v2beta1/session_entity_type.grpc.pb.cc protos/google/cloud/dialogflow/v2beta1/webhook.pb.cc protos/google/cloud/dialogflow/v2beta1/webhook.grpc.pb.cc protos/google/cloud/texttospeech/v1/cloud_tts.pb.cc protos/google/cloud/texttospeech/v1/cloud_tts.grpc.pb.cc protos/google/cloud/texttospeech/v1beta1/cloud_tts.pb.cc protos/google/cloud/texttospeech/v1beta1/cloud_tts.grpc.pb.cc protos/google/logging/type/http_request.pb.cc protos/google/logging/type/http_request.grpc.pb.cc protos/google/logging/type/log_severity.pb.cc protos/google/logging/type/log_severity.grpc.pb.cc protos/google/logging/v2/logging.pb.cc protos/google/logging/v2/logging.grpc.pb.cc protos/google/logging/v2/logging_config.pb.cc protos/google/logging/v2/logging_config.grpc.pb.cc protos/google/logging/v2/logging_metrics.pb.cc protos/google/logging/v2/logging_metrics.grpc.pb.cc protos/google/logging/v2/log_entry.pb.cc protos/google/logging/v2/log_entry.grpc.pb.cc protos/google/longrunning/operations.pb.cc protos/google/longrunning/operations.grpc.pb.cc protos/google/rpc/code.pb.cc protos/google/rpc/code.grpc.pb.cc protos/google/rpc/error_details.pb.cc protos/google/rpc/error_details.grpc.pb.cc protos/google/rpc/status.pb.cc protos/google/rpc/status.grpc.pb.cc protos/google/type/color.pb.cc protos/google/type/color.grpc.pb.cc protos/google/type/date.pb.cc protos/google/type/date.grpc.pb.cc protos/google/type/dayofweek.pb.cc protos/google/type/dayofweek.grpc.pb.cc protos/google/type/latlng.pb.cc protos/google/type/latlng.grpc.pb.cc protos/google/type/money.pb.cc protos/google/type/money.grpc.pb.cc protos/google/type/postal_address.pb.cc protos/google/type/postal_address.grpc.pb.cc protos/google/type/timeofday.pb.cc protos/google/type/timeofday.grpc.pb.cc
+PROTOOBJS= protos/google/api/annotations.pb.oo protos/google/api/annotations.grpc.pb.oo protos/google/api/auth.pb.oo protos/google/api/auth.grpc.pb.oo protos/google/api/backend.pb.oo protos/google/api/backend.grpc.pb.oo protos/google/api/billing.pb.oo protos/google/api/billing.grpc.pb.oo protos/google/api/config_change.pb.oo protos/google/api/config_change.grpc.pb.oo protos/google/api/consumer.pb.oo protos/google/api/consumer.grpc.pb.oo protos/google/api/context.pb.oo protos/google/api/context.grpc.pb.oo protos/google/api/control.pb.oo protos/google/api/control.grpc.pb.oo protos/google/api/distribution.pb.oo protos/google/api/distribution.grpc.pb.oo protos/google/api/documentation.pb.oo protos/google/api/documentation.grpc.pb.oo protos/google/api/endpoint.pb.oo protos/google/api/endpoint.grpc.pb.oo protos/google/api/experimental/authorization_config.pb.oo protos/google/api/experimental/authorization_config.grpc.pb.oo protos/google/api/experimental/experimental.pb.oo protos/google/api/experimental/experimental.grpc.pb.oo protos/google/api/http.pb.oo protos/google/api/http.grpc.pb.oo protos/google/api/httpbody.pb.oo protos/google/api/httpbody.grpc.pb.oo protos/google/api/label.pb.oo protos/google/api/label.grpc.pb.oo protos/google/api/log.pb.oo protos/google/api/log.grpc.pb.oo protos/google/api/logging.pb.oo protos/google/api/logging.grpc.pb.oo protos/google/api/metric.pb.oo protos/google/api/metric.grpc.pb.oo protos/google/api/monitored_resource.pb.oo protos/google/api/monitored_resource.grpc.pb.oo protos/google/api/monitoring.pb.oo protos/google/api/monitoring.grpc.pb.oo protos/google/api/quota.pb.oo protos/google/api/quota.grpc.pb.oo protos/google/api/service.pb.oo protos/google/api/service.grpc.pb.oo protos/google/api/servicecontrol/v1/check_error.pb.oo protos/google/api/servicecontrol/v1/check_error.grpc.pb.oo protos/google/api/servicecontrol/v1/distribution.pb.oo protos/google/api/servicecontrol/v1/distribution.grpc.pb.oo protos/google/api/servicecontrol/v1/log_entry.pb.oo protos/google/api/servicecontrol/v1/log_entry.grpc.pb.oo protos/google/api/servicecontrol/v1/metric_value.pb.oo protos/google/api/servicecontrol/v1/metric_value.grpc.pb.oo protos/google/api/servicecontrol/v1/operation.pb.oo protos/google/api/servicecontrol/v1/operation.grpc.pb.oo protos/google/api/servicecontrol/v1/quota_controller.pb.oo protos/google/api/servicecontrol/v1/quota_controller.grpc.pb.oo protos/google/api/servicecontrol/v1/service_controller.pb.oo protos/google/api/servicecontrol/v1/service_controller.grpc.pb.oo protos/google/api/servicemanagement/v1/resources.pb.oo protos/google/api/servicemanagement/v1/resources.grpc.pb.oo protos/google/api/servicemanagement/v1/servicemanager.pb.oo protos/google/api/servicemanagement/v1/servicemanager.grpc.pb.oo protos/google/api/source_info.pb.oo protos/google/api/source_info.grpc.pb.oo protos/google/api/system_parameter.pb.oo protos/google/api/system_parameter.grpc.pb.oo protos/google/api/usage.pb.oo protos/google/api/usage.grpc.pb.oo protos/google/cloud/dialogflow/v2beta1/agent.pb.oo protos/google/cloud/dialogflow/v2beta1/agent.grpc.pb.oo protos/google/cloud/dialogflow/v2beta1/audio_config.pb.oo protos/google/cloud/dialogflow/v2beta1/audio_config.grpc.pb.oo protos/google/cloud/dialogflow/v2beta1/context.pb.oo protos/google/cloud/dialogflow/v2beta1/context.grpc.pb.oo protos/google/cloud/dialogflow/v2beta1/document.pb.oo protos/google/cloud/dialogflow/v2beta1/document.grpc.pb.oo protos/google/cloud/dialogflow/v2beta1/entity_type.pb.oo protos/google/cloud/dialogflow/v2beta1/entity_type.grpc.pb.oo protos/google/cloud/dialogflow/v2beta1/intent.pb.oo protos/google/cloud/dialogflow/v2beta1/intent.grpc.pb.oo protos/google/cloud/dialogflow/v2beta1/knowledge_base.pb.oo protos/google/cloud/dialogflow/v2beta1/knowledge_base.grpc.pb.oo protos/google/cloud/dialogflow/v2beta1/session.pb.oo protos/google/cloud/dialogflow/v2beta1/session.grpc.pb.oo protos/google/cloud/dialogflow/v2beta1/session_entity_type.pb.oo protos/google/cloud/dialogflow/v2beta1/session_entity_type.grpc.pb.oo protos/google/cloud/dialogflow/v2beta1/webhook.pb.oo protos/google/cloud/dialogflow/v2beta1/webhook.grpc.pb.oo protos/google/cloud/texttospeech/v1/cloud_tts.pb.oo protos/google/cloud/texttospeech/v1/cloud_tts.grpc.pb.oo protos/google/cloud/texttospeech/v1beta1/cloud_tts.pb.oo protos/google/cloud/texttospeech/v1beta1/cloud_tts.grpc.pb.oo protos/google/logging/type/http_request.pb.oo protos/google/logging/type/http_request.grpc.pb.oo protos/google/logging/type/log_severity.pb.oo protos/google/logging/type/log_severity.grpc.pb.oo protos/google/logging/v2/logging.pb.oo protos/google/logging/v2/logging.grpc.pb.oo protos/google/logging/v2/logging_config.pb.oo protos/google/logging/v2/logging_config.grpc.pb.oo protos/google/logging/v2/logging_metrics.pb.oo protos/google/logging/v2/logging_metrics.grpc.pb.oo protos/google/logging/v2/log_entry.pb.oo protos/google/logging/v2/log_entry.grpc.pb.oo protos/google/longrunning/operations.pb.oo protos/google/longrunning/operations.grpc.pb.oo protos/google/rpc/code.pb.oo protos/google/rpc/code.grpc.pb.oo protos/google/rpc/error_details.pb.oo protos/google/rpc/error_details.grpc.pb.oo protos/google/rpc/status.pb.oo protos/google/rpc/status.grpc.pb.oo protos/google/type/color.pb.oo protos/google/type/color.grpc.pb.oo protos/google/type/date.pb.oo protos/google/type/date.grpc.pb.oo protos/google/type/dayofweek.pb.oo protos/google/type/dayofweek.grpc.pb.oo protos/google/type/latlng.pb.oo protos/google/type/latlng.grpc.pb.oo protos/google/type/money.pb.oo protos/google/type/money.grpc.pb.oo protos/google/type/postal_address.pb.oo protos/google/type/postal_address.grpc.pb.oo protos/google/type/timeofday.pb.oo protos/google/type/timeofday.grpc.pb.oo
+protos/google/api/annotations.pb.cc: protos/google/api/annotations.proto
+	protoc --proto_path=protos:/usr/include --cpp_out=protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/api/annotations.proto
+protos/google/api/annotations.grpc.pb.cc: protos/google/api/annotations.proto
+	protoc --proto_path=protos:/usr/include --grpc_out=generate_mock_code=true:protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/api/annotations.proto
+protos/google/api/auth.pb.cc: protos/google/api/auth.proto
+	protoc --proto_path=protos:/usr/include --cpp_out=protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/api/auth.proto
+protos/google/api/auth.grpc.pb.cc: protos/google/api/auth.proto
+	protoc --proto_path=protos:/usr/include --grpc_out=generate_mock_code=true:protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/api/auth.proto
+protos/google/api/backend.pb.cc: protos/google/api/backend.proto
+	protoc --proto_path=protos:/usr/include --cpp_out=protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/api/backend.proto
+protos/google/api/backend.grpc.pb.cc: protos/google/api/backend.proto
+	protoc --proto_path=protos:/usr/include --grpc_out=generate_mock_code=true:protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/api/backend.proto
+protos/google/api/billing.pb.cc: protos/google/api/billing.proto
+	protoc --proto_path=protos:/usr/include --cpp_out=protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/api/billing.proto
+protos/google/api/billing.grpc.pb.cc: protos/google/api/billing.proto
+	protoc --proto_path=protos:/usr/include --grpc_out=generate_mock_code=true:protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/api/billing.proto
+protos/google/api/config_change.pb.cc: protos/google/api/config_change.proto
+	protoc --proto_path=protos:/usr/include --cpp_out=protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/api/config_change.proto
+protos/google/api/config_change.grpc.pb.cc: protos/google/api/config_change.proto
+	protoc --proto_path=protos:/usr/include --grpc_out=generate_mock_code=true:protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/api/config_change.proto
+protos/google/api/consumer.pb.cc: protos/google/api/consumer.proto
+	protoc --proto_path=protos:/usr/include --cpp_out=protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/api/consumer.proto
+protos/google/api/consumer.grpc.pb.cc: protos/google/api/consumer.proto
+	protoc --proto_path=protos:/usr/include --grpc_out=generate_mock_code=true:protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/api/consumer.proto
+protos/google/api/context.pb.cc: protos/google/api/context.proto
+	protoc --proto_path=protos:/usr/include --cpp_out=protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/api/context.proto
+protos/google/api/context.grpc.pb.cc: protos/google/api/context.proto
+	protoc --proto_path=protos:/usr/include --grpc_out=generate_mock_code=true:protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/api/context.proto
+protos/google/api/control.pb.cc: protos/google/api/control.proto
+	protoc --proto_path=protos:/usr/include --cpp_out=protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/api/control.proto
+protos/google/api/control.grpc.pb.cc: protos/google/api/control.proto
+	protoc --proto_path=protos:/usr/include --grpc_out=generate_mock_code=true:protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/api/control.proto
+protos/google/api/distribution.pb.cc: protos/google/api/distribution.proto
+	protoc --proto_path=protos:/usr/include --cpp_out=protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/api/distribution.proto
+protos/google/api/distribution.grpc.pb.cc: protos/google/api/distribution.proto
+	protoc --proto_path=protos:/usr/include --grpc_out=generate_mock_code=true:protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/api/distribution.proto
+protos/google/api/documentation.pb.cc: protos/google/api/documentation.proto
+	protoc --proto_path=protos:/usr/include --cpp_out=protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/api/documentation.proto
+protos/google/api/documentation.grpc.pb.cc: protos/google/api/documentation.proto
+	protoc --proto_path=protos:/usr/include --grpc_out=generate_mock_code=true:protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/api/documentation.proto
+protos/google/api/endpoint.pb.cc: protos/google/api/endpoint.proto
+	protoc --proto_path=protos:/usr/include --cpp_out=protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/api/endpoint.proto
+protos/google/api/endpoint.grpc.pb.cc: protos/google/api/endpoint.proto
+	protoc --proto_path=protos:/usr/include --grpc_out=generate_mock_code=true:protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/api/endpoint.proto
+protos/google/api/experimental/authorization_config.pb.cc: protos/google/api/experimental/authorization_config.proto
+	protoc --proto_path=protos:/usr/include --cpp_out=protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/api/experimental/authorization_config.proto
+protos/google/api/experimental/authorization_config.grpc.pb.cc: protos/google/api/experimental/authorization_config.proto
+	protoc --proto_path=protos:/usr/include --grpc_out=generate_mock_code=true:protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/api/experimental/authorization_config.proto
+protos/google/api/experimental/experimental.pb.cc: protos/google/api/experimental/experimental.proto
+	protoc --proto_path=protos:/usr/include --cpp_out=protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/api/experimental/experimental.proto
+protos/google/api/experimental/experimental.grpc.pb.cc: protos/google/api/experimental/experimental.proto
+	protoc --proto_path=protos:/usr/include --grpc_out=generate_mock_code=true:protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/api/experimental/experimental.proto
+protos/google/api/http.pb.cc: protos/google/api/http.proto
+	protoc --proto_path=protos:/usr/include --cpp_out=protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/api/http.proto
+protos/google/api/http.grpc.pb.cc: protos/google/api/http.proto
+	protoc --proto_path=protos:/usr/include --grpc_out=generate_mock_code=true:protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/api/http.proto
+protos/google/api/httpbody.pb.cc: protos/google/api/httpbody.proto
+	protoc --proto_path=protos:/usr/include --cpp_out=protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/api/httpbody.proto
+protos/google/api/httpbody.grpc.pb.cc: protos/google/api/httpbody.proto
+	protoc --proto_path=protos:/usr/include --grpc_out=generate_mock_code=true:protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/api/httpbody.proto
+protos/google/api/label.pb.cc: protos/google/api/label.proto
+	protoc --proto_path=protos:/usr/include --cpp_out=protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/api/label.proto
+protos/google/api/label.grpc.pb.cc: protos/google/api/label.proto
+	protoc --proto_path=protos:/usr/include --grpc_out=generate_mock_code=true:protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/api/label.proto
+protos/google/api/log.pb.cc: protos/google/api/log.proto
+	protoc --proto_path=protos:/usr/include --cpp_out=protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/api/log.proto
+protos/google/api/log.grpc.pb.cc: protos/google/api/log.proto
+	protoc --proto_path=protos:/usr/include --grpc_out=generate_mock_code=true:protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/api/log.proto
+protos/google/api/logging.pb.cc: protos/google/api/logging.proto
+	protoc --proto_path=protos:/usr/include --cpp_out=protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/api/logging.proto
+protos/google/api/logging.grpc.pb.cc: protos/google/api/logging.proto
+	protoc --proto_path=protos:/usr/include --grpc_out=generate_mock_code=true:protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/api/logging.proto
+protos/google/api/metric.pb.cc: protos/google/api/metric.proto
+	protoc --proto_path=protos:/usr/include --cpp_out=protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/api/metric.proto
+protos/google/api/metric.grpc.pb.cc: protos/google/api/metric.proto
+	protoc --proto_path=protos:/usr/include --grpc_out=generate_mock_code=true:protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/api/metric.proto
+protos/google/api/monitored_resource.pb.cc: protos/google/api/monitored_resource.proto
+	protoc --proto_path=protos:/usr/include --cpp_out=protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/api/monitored_resource.proto
+protos/google/api/monitored_resource.grpc.pb.cc: protos/google/api/monitored_resource.proto
+	protoc --proto_path=protos:/usr/include --grpc_out=generate_mock_code=true:protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/api/monitored_resource.proto
+protos/google/api/monitoring.pb.cc: protos/google/api/monitoring.proto
+	protoc --proto_path=protos:/usr/include --cpp_out=protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/api/monitoring.proto
+protos/google/api/monitoring.grpc.pb.cc: protos/google/api/monitoring.proto
+	protoc --proto_path=protos:/usr/include --grpc_out=generate_mock_code=true:protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/api/monitoring.proto
+protos/google/api/quota.pb.cc: protos/google/api/quota.proto
+	protoc --proto_path=protos:/usr/include --cpp_out=protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/api/quota.proto
+protos/google/api/quota.grpc.pb.cc: protos/google/api/quota.proto
+	protoc --proto_path=protos:/usr/include --grpc_out=generate_mock_code=true:protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/api/quota.proto
+protos/google/api/service.pb.cc: protos/google/api/service.proto
+	protoc --proto_path=protos:/usr/include --cpp_out=protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/api/service.proto
+protos/google/api/service.grpc.pb.cc: protos/google/api/service.proto
+	protoc --proto_path=protos:/usr/include --grpc_out=generate_mock_code=true:protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/api/service.proto
+protos/google/api/servicecontrol/v1/check_error.pb.cc: protos/google/api/servicecontrol/v1/check_error.proto
+	protoc --proto_path=protos:/usr/include --cpp_out=protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/api/servicecontrol/v1/check_error.proto
+protos/google/api/servicecontrol/v1/check_error.grpc.pb.cc: protos/google/api/servicecontrol/v1/check_error.proto
+	protoc --proto_path=protos:/usr/include --grpc_out=generate_mock_code=true:protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/api/servicecontrol/v1/check_error.proto
+protos/google/api/servicecontrol/v1/distribution.pb.cc: protos/google/api/servicecontrol/v1/distribution.proto
+	protoc --proto_path=protos:/usr/include --cpp_out=protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/api/servicecontrol/v1/distribution.proto
+protos/google/api/servicecontrol/v1/distribution.grpc.pb.cc: protos/google/api/servicecontrol/v1/distribution.proto
+	protoc --proto_path=protos:/usr/include --grpc_out=generate_mock_code=true:protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/api/servicecontrol/v1/distribution.proto
+protos/google/api/servicecontrol/v1/log_entry.pb.cc: protos/google/api/servicecontrol/v1/log_entry.proto
+	protoc --proto_path=protos:/usr/include --cpp_out=protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/api/servicecontrol/v1/log_entry.proto
+protos/google/api/servicecontrol/v1/log_entry.grpc.pb.cc: protos/google/api/servicecontrol/v1/log_entry.proto
+	protoc --proto_path=protos:/usr/include --grpc_out=generate_mock_code=true:protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/api/servicecontrol/v1/log_entry.proto
+protos/google/api/servicecontrol/v1/metric_value.pb.cc: protos/google/api/servicecontrol/v1/metric_value.proto
+	protoc --proto_path=protos:/usr/include --cpp_out=protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/api/servicecontrol/v1/metric_value.proto
+protos/google/api/servicecontrol/v1/metric_value.grpc.pb.cc: protos/google/api/servicecontrol/v1/metric_value.proto
+	protoc --proto_path=protos:/usr/include --grpc_out=generate_mock_code=true:protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/api/servicecontrol/v1/metric_value.proto
+protos/google/api/servicecontrol/v1/operation.pb.cc: protos/google/api/servicecontrol/v1/operation.proto
+	protoc --proto_path=protos:/usr/include --cpp_out=protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/api/servicecontrol/v1/operation.proto
+protos/google/api/servicecontrol/v1/operation.grpc.pb.cc: protos/google/api/servicecontrol/v1/operation.proto
+	protoc --proto_path=protos:/usr/include --grpc_out=generate_mock_code=true:protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/api/servicecontrol/v1/operation.proto
+protos/google/api/servicecontrol/v1/quota_controller.pb.cc: protos/google/api/servicecontrol/v1/quota_controller.proto
+	protoc --proto_path=protos:/usr/include --cpp_out=protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/api/servicecontrol/v1/quota_controller.proto
+protos/google/api/servicecontrol/v1/quota_controller.grpc.pb.cc: protos/google/api/servicecontrol/v1/quota_controller.proto
+	protoc --proto_path=protos:/usr/include --grpc_out=generate_mock_code=true:protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/api/servicecontrol/v1/quota_controller.proto
+protos/google/api/servicecontrol/v1/service_controller.pb.cc: protos/google/api/servicecontrol/v1/service_controller.proto
+	protoc --proto_path=protos:/usr/include --cpp_out=protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/api/servicecontrol/v1/service_controller.proto
+protos/google/api/servicecontrol/v1/service_controller.grpc.pb.cc: protos/google/api/servicecontrol/v1/service_controller.proto
+	protoc --proto_path=protos:/usr/include --grpc_out=generate_mock_code=true:protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/api/servicecontrol/v1/service_controller.proto
+protos/google/api/servicemanagement/v1/resources.pb.cc: protos/google/api/servicemanagement/v1/resources.proto
+	protoc --proto_path=protos:/usr/include --cpp_out=protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/api/servicemanagement/v1/resources.proto
+protos/google/api/servicemanagement/v1/resources.grpc.pb.cc: protos/google/api/servicemanagement/v1/resources.proto
+	protoc --proto_path=protos:/usr/include --grpc_out=generate_mock_code=true:protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/api/servicemanagement/v1/resources.proto
+protos/google/api/servicemanagement/v1/servicemanager.pb.cc: protos/google/api/servicemanagement/v1/servicemanager.proto
+	protoc --proto_path=protos:/usr/include --cpp_out=protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/api/servicemanagement/v1/servicemanager.proto
+protos/google/api/servicemanagement/v1/servicemanager.grpc.pb.cc: protos/google/api/servicemanagement/v1/servicemanager.proto
+	protoc --proto_path=protos:/usr/include --grpc_out=generate_mock_code=true:protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/api/servicemanagement/v1/servicemanager.proto
+protos/google/api/source_info.pb.cc: protos/google/api/source_info.proto
+	protoc --proto_path=protos:/usr/include --cpp_out=protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/api/source_info.proto
+protos/google/api/source_info.grpc.pb.cc: protos/google/api/source_info.proto
+	protoc --proto_path=protos:/usr/include --grpc_out=generate_mock_code=true:protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/api/source_info.proto
+protos/google/api/system_parameter.pb.cc: protos/google/api/system_parameter.proto
+	protoc --proto_path=protos:/usr/include --cpp_out=protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/api/system_parameter.proto
+protos/google/api/system_parameter.grpc.pb.cc: protos/google/api/system_parameter.proto
+	protoc --proto_path=protos:/usr/include --grpc_out=generate_mock_code=true:protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/api/system_parameter.proto
+protos/google/api/usage.pb.cc: protos/google/api/usage.proto
+	protoc --proto_path=protos:/usr/include --cpp_out=protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/api/usage.proto
+protos/google/api/usage.grpc.pb.cc: protos/google/api/usage.proto
+	protoc --proto_path=protos:/usr/include --grpc_out=generate_mock_code=true:protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/api/usage.proto
+protos/google/cloud/dialogflow/v2beta1/agent.pb.cc: protos/google/cloud/dialogflow/v2beta1/agent.proto
+	protoc --proto_path=protos:/usr/include --cpp_out=protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/cloud/dialogflow/v2beta1/agent.proto
+protos/google/cloud/dialogflow/v2beta1/agent.grpc.pb.cc: protos/google/cloud/dialogflow/v2beta1/agent.proto
+	protoc --proto_path=protos:/usr/include --grpc_out=generate_mock_code=true:protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/cloud/dialogflow/v2beta1/agent.proto
+protos/google/cloud/dialogflow/v2beta1/audio_config.pb.cc: protos/google/cloud/dialogflow/v2beta1/audio_config.proto
+	protoc --proto_path=protos:/usr/include --cpp_out=protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/cloud/dialogflow/v2beta1/audio_config.proto
+protos/google/cloud/dialogflow/v2beta1/audio_config.grpc.pb.cc: protos/google/cloud/dialogflow/v2beta1/audio_config.proto
+	protoc --proto_path=protos:/usr/include --grpc_out=generate_mock_code=true:protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/cloud/dialogflow/v2beta1/audio_config.proto
+protos/google/cloud/dialogflow/v2beta1/context.pb.cc: protos/google/cloud/dialogflow/v2beta1/context.proto
+	protoc --proto_path=protos:/usr/include --cpp_out=protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/cloud/dialogflow/v2beta1/context.proto
+protos/google/cloud/dialogflow/v2beta1/context.grpc.pb.cc: protos/google/cloud/dialogflow/v2beta1/context.proto
+	protoc --proto_path=protos:/usr/include --grpc_out=generate_mock_code=true:protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/cloud/dialogflow/v2beta1/context.proto
+protos/google/cloud/dialogflow/v2beta1/document.pb.cc: protos/google/cloud/dialogflow/v2beta1/document.proto
+	protoc --proto_path=protos:/usr/include --cpp_out=protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/cloud/dialogflow/v2beta1/document.proto
+protos/google/cloud/dialogflow/v2beta1/document.grpc.pb.cc: protos/google/cloud/dialogflow/v2beta1/document.proto
+	protoc --proto_path=protos:/usr/include --grpc_out=generate_mock_code=true:protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/cloud/dialogflow/v2beta1/document.proto
+protos/google/cloud/dialogflow/v2beta1/entity_type.pb.cc: protos/google/cloud/dialogflow/v2beta1/entity_type.proto
+	protoc --proto_path=protos:/usr/include --cpp_out=protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/cloud/dialogflow/v2beta1/entity_type.proto
+protos/google/cloud/dialogflow/v2beta1/entity_type.grpc.pb.cc: protos/google/cloud/dialogflow/v2beta1/entity_type.proto
+	protoc --proto_path=protos:/usr/include --grpc_out=generate_mock_code=true:protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/cloud/dialogflow/v2beta1/entity_type.proto
+protos/google/cloud/dialogflow/v2beta1/intent.pb.cc: protos/google/cloud/dialogflow/v2beta1/intent.proto
+	protoc --proto_path=protos:/usr/include --cpp_out=protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/cloud/dialogflow/v2beta1/intent.proto
+protos/google/cloud/dialogflow/v2beta1/intent.grpc.pb.cc: protos/google/cloud/dialogflow/v2beta1/intent.proto
+	protoc --proto_path=protos:/usr/include --grpc_out=generate_mock_code=true:protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/cloud/dialogflow/v2beta1/intent.proto
+protos/google/cloud/dialogflow/v2beta1/knowledge_base.pb.cc: protos/google/cloud/dialogflow/v2beta1/knowledge_base.proto
+	protoc --proto_path=protos:/usr/include --cpp_out=protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/cloud/dialogflow/v2beta1/knowledge_base.proto
+protos/google/cloud/dialogflow/v2beta1/knowledge_base.grpc.pb.cc: protos/google/cloud/dialogflow/v2beta1/knowledge_base.proto
+	protoc --proto_path=protos:/usr/include --grpc_out=generate_mock_code=true:protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/cloud/dialogflow/v2beta1/knowledge_base.proto
+protos/google/cloud/dialogflow/v2beta1/session.pb.cc: protos/google/cloud/dialogflow/v2beta1/session.proto
+	protoc --proto_path=protos:/usr/include --cpp_out=protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/cloud/dialogflow/v2beta1/session.proto
+protos/google/cloud/dialogflow/v2beta1/session.grpc.pb.cc: protos/google/cloud/dialogflow/v2beta1/session.proto
+	protoc --proto_path=protos:/usr/include --grpc_out=generate_mock_code=true:protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/cloud/dialogflow/v2beta1/session.proto
+protos/google/cloud/dialogflow/v2beta1/session_entity_type.pb.cc: protos/google/cloud/dialogflow/v2beta1/session_entity_type.proto
+	protoc --proto_path=protos:/usr/include --cpp_out=protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/cloud/dialogflow/v2beta1/session_entity_type.proto
+protos/google/cloud/dialogflow/v2beta1/session_entity_type.grpc.pb.cc: protos/google/cloud/dialogflow/v2beta1/session_entity_type.proto
+	protoc --proto_path=protos:/usr/include --grpc_out=generate_mock_code=true:protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/cloud/dialogflow/v2beta1/session_entity_type.proto
+protos/google/cloud/dialogflow/v2beta1/webhook.pb.cc: protos/google/cloud/dialogflow/v2beta1/webhook.proto
+	protoc --proto_path=protos:/usr/include --cpp_out=protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/cloud/dialogflow/v2beta1/webhook.proto
+protos/google/cloud/dialogflow/v2beta1/webhook.grpc.pb.cc: protos/google/cloud/dialogflow/v2beta1/webhook.proto
+	protoc --proto_path=protos:/usr/include --grpc_out=generate_mock_code=true:protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/cloud/dialogflow/v2beta1/webhook.proto
+protos/google/cloud/texttospeech/v1/cloud_tts.pb.cc: protos/google/cloud/texttospeech/v1/cloud_tts.proto
+	protoc --proto_path=protos:/usr/include --cpp_out=protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/cloud/texttospeech/v1/cloud_tts.proto
+protos/google/cloud/texttospeech/v1/cloud_tts.grpc.pb.cc: protos/google/cloud/texttospeech/v1/cloud_tts.proto
+	protoc --proto_path=protos:/usr/include --grpc_out=generate_mock_code=true:protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/cloud/texttospeech/v1/cloud_tts.proto
+protos/google/cloud/texttospeech/v1beta1/cloud_tts.pb.cc: protos/google/cloud/texttospeech/v1beta1/cloud_tts.proto
+	protoc --proto_path=protos:/usr/include --cpp_out=protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/cloud/texttospeech/v1beta1/cloud_tts.proto
+protos/google/cloud/texttospeech/v1beta1/cloud_tts.grpc.pb.cc: protos/google/cloud/texttospeech/v1beta1/cloud_tts.proto
+	protoc --proto_path=protos:/usr/include --grpc_out=generate_mock_code=true:protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/cloud/texttospeech/v1beta1/cloud_tts.proto
+protos/google/logging/type/http_request.pb.cc: protos/google/logging/type/http_request.proto
+	protoc --proto_path=protos:/usr/include --cpp_out=protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/logging/type/http_request.proto
+protos/google/logging/type/http_request.grpc.pb.cc: protos/google/logging/type/http_request.proto
+	protoc --proto_path=protos:/usr/include --grpc_out=generate_mock_code=true:protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/logging/type/http_request.proto
+protos/google/logging/type/log_severity.pb.cc: protos/google/logging/type/log_severity.proto
+	protoc --proto_path=protos:/usr/include --cpp_out=protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/logging/type/log_severity.proto
+protos/google/logging/type/log_severity.grpc.pb.cc: protos/google/logging/type/log_severity.proto
+	protoc --proto_path=protos:/usr/include --grpc_out=generate_mock_code=true:protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/logging/type/log_severity.proto
+protos/google/logging/v2/logging.pb.cc: protos/google/logging/v2/logging.proto
+	protoc --proto_path=protos:/usr/include --cpp_out=protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/logging/v2/logging.proto
+protos/google/logging/v2/logging.grpc.pb.cc: protos/google/logging/v2/logging.proto
+	protoc --proto_path=protos:/usr/include --grpc_out=generate_mock_code=true:protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/logging/v2/logging.proto
+protos/google/logging/v2/logging_config.pb.cc: protos/google/logging/v2/logging_config.proto
+	protoc --proto_path=protos:/usr/include --cpp_out=protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/logging/v2/logging_config.proto
+protos/google/logging/v2/logging_config.grpc.pb.cc: protos/google/logging/v2/logging_config.proto
+	protoc --proto_path=protos:/usr/include --grpc_out=generate_mock_code=true:protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/logging/v2/logging_config.proto
+protos/google/logging/v2/logging_metrics.pb.cc: protos/google/logging/v2/logging_metrics.proto
+	protoc --proto_path=protos:/usr/include --cpp_out=protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/logging/v2/logging_metrics.proto
+protos/google/logging/v2/logging_metrics.grpc.pb.cc: protos/google/logging/v2/logging_metrics.proto
+	protoc --proto_path=protos:/usr/include --grpc_out=generate_mock_code=true:protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/logging/v2/logging_metrics.proto
+protos/google/logging/v2/log_entry.pb.cc: protos/google/logging/v2/log_entry.proto
+	protoc --proto_path=protos:/usr/include --cpp_out=protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/logging/v2/log_entry.proto
+protos/google/logging/v2/log_entry.grpc.pb.cc: protos/google/logging/v2/log_entry.proto
+	protoc --proto_path=protos:/usr/include --grpc_out=generate_mock_code=true:protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/logging/v2/log_entry.proto
+protos/google/longrunning/operations.pb.cc: protos/google/longrunning/operations.proto
+	protoc --proto_path=protos:/usr/include --cpp_out=protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/longrunning/operations.proto
+protos/google/longrunning/operations.grpc.pb.cc: protos/google/longrunning/operations.proto
+	protoc --proto_path=protos:/usr/include --grpc_out=generate_mock_code=true:protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/longrunning/operations.proto
+protos/google/rpc/code.pb.cc: protos/google/rpc/code.proto
+	protoc --proto_path=protos:/usr/include --cpp_out=protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/rpc/code.proto
+protos/google/rpc/code.grpc.pb.cc: protos/google/rpc/code.proto
+	protoc --proto_path=protos:/usr/include --grpc_out=generate_mock_code=true:protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/rpc/code.proto
+protos/google/rpc/error_details.pb.cc: protos/google/rpc/error_details.proto
+	protoc --proto_path=protos:/usr/include --cpp_out=protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/rpc/error_details.proto
+protos/google/rpc/error_details.grpc.pb.cc: protos/google/rpc/error_details.proto
+	protoc --proto_path=protos:/usr/include --grpc_out=generate_mock_code=true:protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/rpc/error_details.proto
+protos/google/rpc/status.pb.cc: protos/google/rpc/status.proto
+	protoc --proto_path=protos:/usr/include --cpp_out=protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/rpc/status.proto
+protos/google/rpc/status.grpc.pb.cc: protos/google/rpc/status.proto
+	protoc --proto_path=protos:/usr/include --grpc_out=generate_mock_code=true:protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/rpc/status.proto
+protos/google/type/color.pb.cc: protos/google/type/color.proto
+	protoc --proto_path=protos:/usr/include --cpp_out=protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/type/color.proto
+protos/google/type/color.grpc.pb.cc: protos/google/type/color.proto
+	protoc --proto_path=protos:/usr/include --grpc_out=generate_mock_code=true:protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/type/color.proto
+protos/google/type/date.pb.cc: protos/google/type/date.proto
+	protoc --proto_path=protos:/usr/include --cpp_out=protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/type/date.proto
+protos/google/type/date.grpc.pb.cc: protos/google/type/date.proto
+	protoc --proto_path=protos:/usr/include --grpc_out=generate_mock_code=true:protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/type/date.proto
+protos/google/type/dayofweek.pb.cc: protos/google/type/dayofweek.proto
+	protoc --proto_path=protos:/usr/include --cpp_out=protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/type/dayofweek.proto
+protos/google/type/dayofweek.grpc.pb.cc: protos/google/type/dayofweek.proto
+	protoc --proto_path=protos:/usr/include --grpc_out=generate_mock_code=true:protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/type/dayofweek.proto
+protos/google/type/latlng.pb.cc: protos/google/type/latlng.proto
+	protoc --proto_path=protos:/usr/include --cpp_out=protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/type/latlng.proto
+protos/google/type/latlng.grpc.pb.cc: protos/google/type/latlng.proto
+	protoc --proto_path=protos:/usr/include --grpc_out=generate_mock_code=true:protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/type/latlng.proto
+protos/google/type/money.pb.cc: protos/google/type/money.proto
+	protoc --proto_path=protos:/usr/include --cpp_out=protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/type/money.proto
+protos/google/type/money.grpc.pb.cc: protos/google/type/money.proto
+	protoc --proto_path=protos:/usr/include --grpc_out=generate_mock_code=true:protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/type/money.proto
+protos/google/type/postal_address.pb.cc: protos/google/type/postal_address.proto
+	protoc --proto_path=protos:/usr/include --cpp_out=protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/type/postal_address.proto
+protos/google/type/postal_address.grpc.pb.cc: protos/google/type/postal_address.proto
+	protoc --proto_path=protos:/usr/include --grpc_out=generate_mock_code=true:protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/type/postal_address.proto
+protos/google/type/timeofday.pb.cc: protos/google/type/timeofday.proto
+	protoc --proto_path=protos:/usr/include --cpp_out=protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/type/timeofday.proto
+protos/google/type/timeofday.grpc.pb.cc: protos/google/type/timeofday.proto
+	protoc --proto_path=protos:/usr/include --grpc_out=generate_mock_code=true:protos --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) protos/google/type/timeofday.proto

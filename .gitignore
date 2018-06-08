@@ -1,0 +1,25 @@
+.vagrant
+.vscode
+*.o
+*.oo
+*.so
+*.a
+protos/**/*.cc
+protos/**/*.h
+*.json
+
+# test programs
+test_client
+test_client2
+test_synth
+google_test_client
+
+# trace files
+*.out
+
+# wave files
+*.wav
+
+# googletest files
+release-*.zip
+googletest-*/
