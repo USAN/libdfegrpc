@@ -8,8 +8,8 @@
 #include <fstream>
 #include <iostream>
 
-#include "libdialogflow.h"
-#include "libdialogflow_internal.h"
+#include "libdfegrpc.h"
+#include "libdfegrpc_internal.h"
 
 #include <grpc/grpc.h>
 #include <grpc/support/log.h>

@@ -2,7 +2,7 @@
 #include "gtest/gtest.h"
 #include "mock_stream.h"
 
-#include "libdialogflow_internal.h"
+#include "libdfegrpc_internal.h"
 
 #include <google/cloud/dialogflow/v2beta1/session_mock.grpc.pb.h>
 

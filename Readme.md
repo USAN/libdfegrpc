@@ -18,7 +18,7 @@ The dialogflow API protos come from the private alpha (at this time, at least). 
    * the `gRPC` library
 1. Run `make` to:
    1. Build the protobuffer code for DialogFlow
-   1. Compile the protobuffer and the shim code to `libdialogflow.so`
+   1. Compile the protobuffer and the shim code to `libdfegrpc.so`
    1. Compile the test client
 
 # Running the test client

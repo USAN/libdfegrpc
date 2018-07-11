@@ -7,6 +7,7 @@
 protos/**/*.cc
 protos/**/*.h
 *.json
+Vagrantfile
 
 # test programs
 test_client

@@ -8,7 +8,7 @@
 #include <errno.h>
 #include <unistd.h>
 
-#include "libdialogflow.h"
+#include "libdfegrpc.h"
 
 #define LOG_DEBUG   DF_LOG_LEVEL_DEBUG, __FILE__, __LINE__, __PRETTY_FUNCTION__
 #define LOG_INFO    DF_LOG_LEVEL_INFO, __FILE__, __LINE__, __PRETTY_FUNCTION__

@@ -4,7 +4,7 @@
 #include <thread>
 #include <mutex>
 
-#include "libdialogflow.h"
+#include "libdfegrpc.h"
 
 #include <grpcpp/channel.h>
 #include <google/cloud/dialogflow/v2beta1/session.grpc.pb.h>

@@ -1,9 +1,9 @@
-SRC = libdialogflow.cc
+SRC = libdfegrpc.cc
 OBJS = $(SRC:.cc=.oo)
-TARGET_LIB = libdialogflow.so
+TARGET_LIB = libdfegrpc.so
 
-CFLAGS = -g -Wall -O0 -DBUILDING_LIBDIALOGFLOW
-CXXFLAGS = -std=c++11 -fPIC -I. -Iprotos -Wall -g -O0 -DBUILDING_LIBDIALOGFLOW
+CFLAGS = -g -Wall -O0 -DBUILDING_LIBDFEGRPC
+CXXFLAGS = -std=c++11 -fPIC -I. -Iprotos -Wall -g -O0 -DBUILDING_LIBDFEGRPC
 LDFLAGS = -shared
 
 GOOGLE_TEST_VERSION = release-1.8.0
@@ -26,23 +26,23 @@ test: test_client test_client2 test_synth google_test_client
 .PHONY: proto-ccs
 proto-ccs: $(PROTOCCS)
 
-libdialogflow.a: $(PROTOOBJS) $(OBJS)
+libdfegrpc.a: $(PROTOOBJS) $(OBJS)
 	$(AR) rcs $@ $^
 
-libdialogflow.oo: libdialogflow.cc libdialogflow.h libdialogflow_internal.h
+libdfegrpc.oo: libdfegrpc.cc libdfegrpc.h libdfegrpc_internal.h
 
 $(TARGET_LIB): $(PROTOOBJS) $(OBJS)
 	$(CXX) $(LDFLAGS) -o $@ $^ -lgrpc++ -lprotobuf -lgrpc
 
 # LD_LIBRARY_PATH=/usr/local/lib:. ./test_client
 test_client: test_client.o
-	$(CC) -g -o $@ test_client.o -ldialogflow -lgrpc++ -lprotobuf -lpthread -lstdc++
+	$(CC) -g -o $@ test_client.o -ldfegrpc -lgrpc++ -lprotobuf -lpthread -lstdc++
 
 test_client2: test_client2.oo $(PROTOOBJS)
-	$(CXX) -g -o $@ test_client2.oo -ldialogflow -lgrpc++ -lprotobuf -lpthread -lstdc++ -lgrpc
+	$(CXX) -g -o $@ test_client2.oo -ldfegrpc -lgrpc++ -lprotobuf -lpthread -lstdc++ -lgrpc
 
 test_synth: test_synth.o
-	$(CC) -g -o $@ test_synth.o -ldialogflow -lgrpc++ -lprotobuf -lpthread -lstdc++
+	$(CC) -g -o $@ test_synth.o -ldfegrpc -lgrpc++ -lprotobuf -lpthread -lstdc++
 
 .PHONY: clean
 clean: 
@@ -58,7 +58,7 @@ PREFIX ?= /usr
 install: $(TARGET_LIB)
 	install -d $(DESTDIR)$(PREFIX)/lib/
 	install -m 644 $(TARGET_LIB) $(DESTDIR)$(PREFIX)/lib/
-	install -m 644 libdialogflow.h $(DESTDIR)$(PREFIX)/include/
+	install -m 644 libdfegrpc.h $(DESTDIR)$(PREFIX)/include/
 	
 
 %.oo: %.cc
@@ -83,4 +83,4 @@ google_test_client.oo: google_test_client.cc googletest-$(GOOGLE_TEST_VERSION)/g
 	$(CXX) -c -o $@ -g $(GOOGLE_TEST_FLAGS) $(CXXFLAGS) $<
 
 google_test_client: google_test_client.oo libgtest.a
-	$(CXX) -o $@ -g $(GOOGLE_TEST_FLAGS) $^ -ldialogflow -lgrpc++ -lprotobuf -lpthread -lstdc++
+	$(CXX) -o $@ -g $(GOOGLE_TEST_FLAGS) $^ -ldfegrpc -lgrpc++ -lprotobuf -lpthread -lstdc++
