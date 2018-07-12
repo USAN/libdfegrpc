@@ -11,7 +11,6 @@ The dialogflow API protos come from the private alpha (at this time, at least). 
 
 # Building the library
 
-1. Start a fresh VM (Centos7.2)
 1. Run the `install_protoc.sh` script to download, compile, and install
    * `protoc` (the protocol specification compiler)
    * the `protobuf` library
@@ -20,11 +19,12 @@ The dialogflow API protos come from the private alpha (at this time, at least). 
    1. Build the protobuffer code for DialogFlow
    1. Compile the protobuffer and the shim code to `libdfegrpc.so`
    1. Compile the test client
+1. Run `make install` to install the library and header files.
 
 # Running the test client
 
+To build the test client, run `make test`.
+
 To run the test client, execute:
 
-```LD_LIBRARY_PATH=/usr/local/lib:. ./test_client```
-
-(you may be able to omit the `LD_LIBRARY_PATH` setting if you first run ldconfig)
+```./test_client```
