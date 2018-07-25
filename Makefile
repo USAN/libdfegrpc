@@ -21,7 +21,7 @@ all: proto-ccs $(TARGET_LIB)
 include Makefile.protos
 
 .PHONY: test
-test: test_client test_client2 test_synth google_test_client
+test: test_client test_synth
 
 .PHONY: proto-ccs
 proto-ccs: $(PROTOCCS)
