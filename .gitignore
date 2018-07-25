@@ -24,3 +24,6 @@ google_test_client
 # googletest files
 release-*.zip
 googletest-*/
+
+# rpms
+*.rpm
