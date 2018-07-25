@@ -6,6 +6,9 @@ CFLAGS = -g -Wall -O0 -DBUILDING_LIBDFEGRPC
 CXXFLAGS = -std=c++11 -fPIC -I. -Iprotos -Wall -g -O0 -DBUILDING_LIBDFEGRPC
 LDFLAGS = -shared
 
+VERSION ?= 1.0.0
+ARCH ?= 
+
 GOOGLE_TEST_VERSION = release-1.8.0
 GOOGLE_TEST_ARCHIVE = $(GOOGLE_TEST_VERSION).zip
 GOOGLE_TEST_ARCHIVE_URI = https://github.com/google/googletest/archive/$(GOOGLE_TEST_ARCHIVE)
@@ -60,6 +63,25 @@ install: $(TARGET_LIB)
 	install -m 644 $(TARGET_LIB) $(DESTDIR)$(PREFIX)/lib/
 	install -m 644 libdfegrpc.h $(DESTDIR)$(PREFIX)/include/
 	
+.PHONY: rpm
+rpm: libdfegrpc-1.0.0-1.x86_64.rpm
+
+libdfegrpc-$(VERSION)-1.x86_64.rpm: /usr/lib/libdfegrpc.so test_client test_synth
+	rm -f $@
+	fpm -s dir -t rpm -n libdfegrpc -v $(VERSION) \
+		--after-install ldconfig.sh \
+		--after-upgrade ldconfig.sh \
+		/usr/lib/libproto* \
+		/usr/lib/libgrpc* \
+		/usr/include/google/protobuf/* \
+   		/usr/include/grpc \
+		/usr/bin/protoc \
+		/usr/share/grpc \
+		/usr/bin/grpc_cpp_plugin \
+		/usr/lib/libgpr* \
+		/usr/lib/libdfegrpc.so \
+		test_client=/usr/bin/dfegrpc_test_client \
+		test_synth=/usr/bin/dfegrpc_test_synth
 
 %.oo: %.cc
 	$(CXX) -c -o $@ $(CXXFLAGS) $<
