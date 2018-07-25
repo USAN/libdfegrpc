@@ -15,7 +15,7 @@ if [ X"$RELEASE" != X"$LATEST" ] ; then
 fi
 
 log "Installing build prerequisites"
-if grep centos /etc/os-release ; then 
+if [ -e /etc/redhat-release ] ; then 
     sudo yum install -y gcc gcc-c++ git autoconf libtool #clang 
 elif grep ubuntu /etc/os-release ; then
     sudo apt-get install -y gcc g++ git autoconf libtool
@@ -72,7 +72,7 @@ log "Building gRPC"
 prefix=/usr make
 
 log "Installing gRPC"
-prefix=/usr sudo -E make install
+sudo sh -c 'prefix=/usr make install'
 sudo ldconfig
 
 log "Done"
