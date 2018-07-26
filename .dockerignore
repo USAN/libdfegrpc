@@ -1,0 +1,6 @@
+**/*.oo
+**/*.rpm
+**/*.so
+**/*.zip
+**/*.json
+.vagrant
