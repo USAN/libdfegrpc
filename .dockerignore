@@ -4,3 +4,4 @@
 **/*.zip
 **/*.json
 .vagrant
+.build

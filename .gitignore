@@ -27,3 +27,5 @@ googletest-*/
 
 # rpms
 *.rpm
+
+.build/
