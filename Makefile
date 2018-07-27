@@ -99,21 +99,21 @@ docker-build: $(RPMS)
 .build:
 	mkdir -p .build
 
-.build/centos6cpp11: Dockerfile .build
-	docker build --tag centos6cpp11:latest .
+.build/libdfegrpc_build: Dockerfile .build
+	docker build --tag libdfegrpc_build:latest .
 	@touch "$@"
 
-libgrpc-$(GRPC_VERSION)-1.x86_64.rpm libgrpc-devel-$(GRPC_VERSION)-1.x86_64.rpm: Makefile.grpcdocker .build/centos6cpp11
+libgrpc-$(GRPC_VERSION)-1.x86_64.rpm libgrpc-devel-$(GRPC_VERSION)-1.x86_64.rpm: Makefile.grpcdocker .build/libdfegrpc_build
 	docker run --rm -v $(CURDIR):/src:ro \
 			-v $(CURDIR):/out \
-			-w /tmp centos6cpp11 \
+			-w /tmp libdfegrpc_build \
 			make -f /src/Makefile.grpcdocker
 
 libdfegrpc-$(VERSION)-1.x86_64.rpm libdfegrpc-devel-$(VERSION)-1.x86_64.rpm: Makefile.dfedocker \
 															libgrpc-$(GRPC_VERSION)-1.x86_64.rpm \
 															libgrpc-devel-$(GRPC_VERSION)-1.x86_64.rpm \
-															.build/centos6cpp11
+															.build/libdfegrpc_build
 	docker run --rm -v $(CURDIR):/src:ro \
 			-v $(CURDIR):/out \
-			-w /tmp centos6cpp11 \
+			-w /tmp libdfegrpc_build \
 			make -f /src/Makefile.dfedocker
