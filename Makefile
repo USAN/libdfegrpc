@@ -7,7 +7,7 @@ CXXFLAGS = -std=c++11 -fPIC -I. -Iprotos -Wall -g -O0 -DBUILDING_LIBDFEGRPC
 LDFLAGS = -shared
 
 VERSION ?= 1.0.0
-ARCH ?= 
+GRPC_VERSION ?= 1.12.1
 
 GOOGLE_TEST_VERSION = release-1.8.0
 GOOGLE_TEST_ARCHIVE = $(GOOGLE_TEST_VERSION).zip
@@ -63,25 +63,25 @@ install: $(TARGET_LIB)
 	install -m 644 $(TARGET_LIB) $(DESTDIR)$(PREFIX)/lib/
 	install -m 644 libdfegrpc.h $(DESTDIR)$(PREFIX)/include/
 	
-.PHONY: rpm
-rpm: libdfegrpc-1.0.0-1.x86_64.rpm
+# .PHONY: rpm
+# rpm: libdfegrpc-1.0.0-1.x86_64.rpm
 
-libdfegrpc-$(VERSION)-1.x86_64.rpm: /usr/lib/libdfegrpc.so test_client test_synth
-	rm -f $@
-	fpm -s dir -t rpm -n libdfegrpc -v $(VERSION) \
-		--after-install ldconfig.sh \
-		--after-upgrade ldconfig.sh \
-		/usr/lib/libproto* \
-		/usr/lib/libgrpc* \
-		/usr/include/google/protobuf/* \
-   		/usr/include/grpc \
-		/usr/bin/protoc \
-		/usr/share/grpc \
-		/usr/bin/grpc_cpp_plugin \
-		/usr/lib/libgpr* \
-		/usr/lib/libdfegrpc.so \
-		test_client=/usr/bin/dfegrpc_test_client \
-		test_synth=/usr/bin/dfegrpc_test_synth
+# libdfegrpc-$(VERSION)-1.x86_64.rpm: /usr/lib/libdfegrpc.so test_client test_synth
+# 	rm -f $@
+# 	fpm -s dir -t rpm -n libdfegrpc -v $(VERSION) \
+# 		--after-install ldconfig.sh \
+# 		--after-upgrade ldconfig.sh \
+# 		/usr/lib/libproto* \
+# 		/usr/lib/libgrpc* \
+# 		/usr/include/google/protobuf/* \
+#    		/usr/include/grpc \
+# 		/usr/bin/protoc \
+# 		/usr/share/grpc \
+# 		/usr/bin/grpc_cpp_plugin \
+# 		/usr/lib/libgpr* \
+# 		/usr/lib/libdfegrpc.so \
+# 		test_client=/usr/bin/dfegrpc_test_client \
+# 		test_synth=/usr/bin/dfegrpc_test_synth
 
 %.oo: %.cc
 	$(CXX) -c -o $@ $(CXXFLAGS) $<
@@ -106,3 +106,34 @@ google_test_client.oo: google_test_client.cc googletest-$(GOOGLE_TEST_VERSION)/g
 
 google_test_client: google_test_client.oo libgtest.a
 	$(CXX) -o $@ -g $(GOOGLE_TEST_FLAGS) $^ -ldfegrpc -lgrpc++ -lprotobuf -lpthread -lstdc++
+
+###################
+# docker build stuff
+###################
+
+RPMS = libgrpc-$(GRPC_VERSION)-1.x86_64.rpm libgrpc-devel-$(GRPC_VERSION)-1.x86_64.rpm libdfegrpc-$(VERSION)-1.x86_64.rpm libdfegrpc-devel-$(VERSION)-1.x86_64.rpm
+
+.PHONY = docker-build
+docker-build: $(RPMS)
+
+.build:
+	mkdir -p .build
+
+.build/centos6cpp11: Dockerfile.centos6cpp11 .build
+	docker build -f Dockerfile.centos6cpp11 --tag centos6cpp11:latest .
+	@touch "$@"
+
+libgrpc-$(GRPC_VERSION)-1.x86_64.rpm libgrpc-devel-$(GRPC_VERSION)-1.x86_64.rpm: Makefile.grpcdocker .build/centos6cpp11
+	docker run --rm -v $(CURDIR):/src:ro \
+			-v $(CURDIR):/out \
+			-w /tmp centos6cpp11 \
+			make -f /src/Makefile.grpcdocker
+
+libdfegrpc-$(VERSION)-1.x86_64.rpm libdfegrpc-devel-$(VERSION)-1.x86_64.rpm: Makefile.dfedocker \
+															libgrpc-$(GRPC_VERSION)-1.x86_64.rpm \
+															libgrpc-devel-$(GRPC_VERSION)-1.x86_64.rpm \
+															.build/centos6cpp11
+	docker run --rm -v $(CURDIR):/src:ro \
+			-v $(CURDIR):/out \
+			-w /tmp centos6cpp11 \
+			make -f /src/Makefile.dfedocker

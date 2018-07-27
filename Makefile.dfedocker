@@ -1,0 +1,33 @@
+VERSION ?= 1.0.0
+GRPC_RELEASE ?= 1.12.1
+PROTOBUF_RELEASE ?= 3.5.1
+
+.PHONY: all
+all: libdfegrpc-$(VERSION)-1.x86_64.rpm libdfegrpc-devel-$(VERSION)-1.x86_64.rpm
+	cp $^ /out
+
+libdfegrpc-$(VERSION)-1.x86_64.rpm: /usr/lib/libdfegrpc.so 
+	fpm -s dir -t rpm -n libdfegrpc -v $(VERSION) \
+		--after-install /src/ldconfig.sh \
+		--after-upgrade /src/ldconfig.sh \
+		-d 'libgrpc-devel > 1' \
+		/usr/include/libdfegrpc.h \
+		/usr/lib/libdfegrpc.so \
+		test_client=/usr/bin/dfegrpc_test_client \
+		test_synth=/usr/bin/dfegrpc_test_synth
+
+libdfegrpc-devel-$(VERSION)-1.x86_64.rpm: /usr/lib/libdfegrpc.so
+	fpm -s dir -t rpm -n libdfegrpc-devel -v $(VERSION) \
+		-d 'libdfegrpc > 1' \
+		/usr/include/libdfegrpc.h 
+
+/usr/lib/libdfegrpc.so: /src/Makefile /usr/lib/libprotobuf.so
+	(cd /src && tar -c -f - Makefile* *.cc *.h *.c) | tar -x -f - -C /tmp
+	(cd /src && tar -c -f - `find ./protos -name "*.proto" -print`) | tar -x -f - -C /tmp
+	make
+	make install
+	make test
+
+/usr/lib/libprotobuf.so:
+	rpm -ivh /src/libgrpc-$(GRPC_RELEASE)-1.x86_64.rpm
+	rpm -ivh /src/libgrpc-devel-$(GRPC_RELEASE)-1.x86_64.rpm
