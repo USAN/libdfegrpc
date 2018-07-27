@@ -63,26 +63,6 @@ install: $(TARGET_LIB)
 	install -m 644 $(TARGET_LIB) $(DESTDIR)$(PREFIX)/lib/
 	install -m 644 libdfegrpc.h $(DESTDIR)$(PREFIX)/include/
 	
-# .PHONY: rpm
-# rpm: libdfegrpc-1.0.0-1.x86_64.rpm
-
-# libdfegrpc-$(VERSION)-1.x86_64.rpm: /usr/lib/libdfegrpc.so test_client test_synth
-# 	rm -f $@
-# 	fpm -s dir -t rpm -n libdfegrpc -v $(VERSION) \
-# 		--after-install ldconfig.sh \
-# 		--after-upgrade ldconfig.sh \
-# 		/usr/lib/libproto* \
-# 		/usr/lib/libgrpc* \
-# 		/usr/include/google/protobuf/* \
-#    		/usr/include/grpc \
-# 		/usr/bin/protoc \
-# 		/usr/share/grpc \
-# 		/usr/bin/grpc_cpp_plugin \
-# 		/usr/lib/libgpr* \
-# 		/usr/lib/libdfegrpc.so \
-# 		test_client=/usr/bin/dfegrpc_test_client \
-# 		test_synth=/usr/bin/dfegrpc_test_synth
-
 %.oo: %.cc
 	$(CXX) -c -o $@ $(CXXFLAGS) $<
 
@@ -119,8 +99,8 @@ docker-build: $(RPMS)
 .build:
 	mkdir -p .build
 
-.build/centos6cpp11: Dockerfile.centos6cpp11 .build
-	docker build -f Dockerfile.centos6cpp11 --tag centos6cpp11:latest .
+.build/centos6cpp11: Dockerfile .build
+	docker build --tag centos6cpp11:latest .
 	@touch "$@"
 
 libgrpc-$(GRPC_VERSION)-1.x86_64.rpm libgrpc-devel-$(GRPC_VERSION)-1.x86_64.rpm: Makefile.grpcdocker .build/centos6cpp11
