@@ -1,4 +1,4 @@
-VERSION ?= 1.0.0
+VERSION ?= $(shell git describe --tags --dirty=M 2> /dev/null | sed -e 's/[^/]*\///g' -e 's/-/_/g')
 GRPC_RELEASE ?= 1.12.1
 PROTOBUF_RELEASE ?= 3.5.1
 
