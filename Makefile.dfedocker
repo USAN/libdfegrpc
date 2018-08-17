@@ -10,7 +10,7 @@ libdfegrpc-$(VERSION)-1.x86_64.rpm: /usr/lib/libdfegrpc.so
 	fpm -s dir -t rpm -n libdfegrpc -v $(VERSION) \
 		--after-install /src/ldconfig.sh \
 		--after-upgrade /src/ldconfig.sh \
-		-d 'libgrpc-devel > 1' \
+		-d 'libgrpc > 1' \
 		/usr/include/libdfegrpc.h \
 		/usr/lib/libdfegrpc.so \
 		test_client=/usr/bin/dfegrpc_test_client \
@@ -19,6 +19,7 @@ libdfegrpc-$(VERSION)-1.x86_64.rpm: /usr/lib/libdfegrpc.so
 libdfegrpc-devel-$(VERSION)-1.x86_64.rpm: /usr/lib/libdfegrpc.so
 	fpm -s dir -t rpm -n libdfegrpc-devel -v $(VERSION) \
 		-d 'libdfegrpc > 1' \
+		-d 'libgrpc-devel > 1' \
 		/usr/include/libdfegrpc.h 
 
 /usr/lib/libdfegrpc.so: /src/Makefile /usr/lib/libprotobuf.so
