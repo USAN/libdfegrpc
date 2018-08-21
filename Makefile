@@ -6,6 +6,9 @@ CFLAGS = -g -Wall -O0 -DBUILDING_LIBDFEGRPC
 CXXFLAGS = -std=c++11 -fPIC -I. -Iprotos -Wall -g -O0 -DBUILDING_LIBDFEGRPC
 LDFLAGS = -shared
 
+VERSION ?= 1.0.0
+GRPC_VERSION ?= 1.12.1
+
 GOOGLE_TEST_VERSION = release-1.8.0
 GOOGLE_TEST_ARCHIVE = $(GOOGLE_TEST_VERSION).zip
 GOOGLE_TEST_ARCHIVE_URI = https://github.com/google/googletest/archive/$(GOOGLE_TEST_ARCHIVE)
@@ -21,7 +24,7 @@ all: proto-ccs $(TARGET_LIB)
 include Makefile.protos
 
 .PHONY: test
-test: test_client test_client2 test_synth google_test_client
+test: test_client test_synth
 
 .PHONY: proto-ccs
 proto-ccs: $(PROTOCCS)
@@ -60,7 +63,6 @@ install: $(TARGET_LIB)
 	install -m 644 $(TARGET_LIB) $(DESTDIR)$(PREFIX)/lib/
 	install -m 644 libdfegrpc.h $(DESTDIR)$(PREFIX)/include/
 	
-
 %.oo: %.cc
 	$(CXX) -c -o $@ $(CXXFLAGS) $<
 
@@ -84,3 +86,34 @@ google_test_client.oo: google_test_client.cc googletest-$(GOOGLE_TEST_VERSION)/g
 
 google_test_client: google_test_client.oo libgtest.a
 	$(CXX) -o $@ -g $(GOOGLE_TEST_FLAGS) $^ -ldfegrpc -lgrpc++ -lprotobuf -lpthread -lstdc++
+
+###################
+# docker build stuff
+###################
+
+RPMS = libgrpc-$(GRPC_VERSION)-1.x86_64.rpm libgrpc-devel-$(GRPC_VERSION)-1.x86_64.rpm libdfegrpc-$(VERSION)-1.x86_64.rpm libdfegrpc-devel-$(VERSION)-1.x86_64.rpm
+
+.PHONY = docker-build
+docker-build: $(RPMS)
+
+.build:
+	mkdir -p .build
+
+.build/libdfegrpc_build: Dockerfile .build
+	docker build --tag libdfegrpc_build:latest .
+	@touch "$@"
+
+libgrpc-$(GRPC_VERSION)-1.x86_64.rpm libgrpc-devel-$(GRPC_VERSION)-1.x86_64.rpm: Makefile.grpcdocker .build/libdfegrpc_build
+	docker run --rm -v $(CURDIR):/src:ro \
+			-v $(CURDIR):/out \
+			-w /tmp libdfegrpc_build \
+			make -f /src/Makefile.grpcdocker
+
+libdfegrpc-$(VERSION)-1.x86_64.rpm libdfegrpc-devel-$(VERSION)-1.x86_64.rpm: Makefile.dfedocker \
+															libgrpc-$(GRPC_VERSION)-1.x86_64.rpm \
+															libgrpc-devel-$(GRPC_VERSION)-1.x86_64.rpm \
+															.build/libdfegrpc_build
+	docker run --rm -v $(CURDIR):/src:ro \
+			-v $(CURDIR):/out \
+			-w /tmp libdfegrpc_build \
+			make -f /src/Makefile.dfedocker

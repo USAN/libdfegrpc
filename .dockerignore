@@ -1,0 +1,7 @@
+**/*.oo
+**/*.rpm
+**/*.so
+**/*.zip
+**/*.json
+.vagrant
+.build

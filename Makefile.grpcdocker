@@ -1,0 +1,42 @@
+GRPC_RELEASE ?= 1.12.1
+PROTOBUF_RELEASE ?= 3.5.1
+
+.PHONY: all
+all: libgrpc-$(GRPC_RELEASE)-1.x86_64.rpm libgrpc-devel-$(GRPC_RELEASE)-1.x86_64.rpm
+	cp $^ /out
+
+libgrpc-$(GRPC_RELEASE)-1.x86_64.rpm: /usr/lib/libprotobuf.so /usr/lib/libgrpc++.so
+	fpm -s dir -t rpm -n libgrpc -v $(GRPC_RELEASE) \
+		--after-install /src/ldconfig.sh \
+		--after-upgrade /src/ldconfig.sh \
+		/usr/lib/libproto* \
+		/usr/lib/libgrpc* \
+		/usr/bin/protoc \
+		/usr/share/grpc \
+		/usr/bin/grpc_cpp_plugin \
+		/usr/lib/libgpr*
+
+libgrpc-devel-$(GRPC_RELEASE)-1.x86_64.rpm: /usr/lib/libprotobuf.so /usr/lib/libgrpc++.so
+	fpm -s dir -t rpm -n libgrpc-devel -v $(GRPC_RELEASE) \
+		-d 'libgrpc > 1' \
+		/usr/include/google/protobuf/* \
+   		/usr/include/grpc*
+
+/usr/lib/libprotobuf.so: protobuf-cpp-$(PROTOBUF_RELEASE).tar.gz
+	rm -Rf protobuf-$(PROTOBUF_RELEASE)
+	tar -x -z -f $<
+	(cd protobuf-$(PROTOBUF_RELEASE) && ./configure --prefix=/usr)
+	$(MAKE) -C protobuf-$(PROTOBUF_RELEASE)
+	$(MAKE) -C protobuf-$(PROTOBUF_RELEASE) install
+	ldconfig
+
+/usr/lib/libgrpc++.so: grpc/Makefile
+	prefix=/usr PKG_CONFIG_PATH=/usr/lib/pkgconfig:$(PKG_CONFIG_PATH) LD_LIBRARY_PATH=/usr/lib make -C grpc
+	prefix=/usr PKG_CONFIG_PATH=/usr/lib/pkgconfig:$(PKG_CONFIG_PATH) LD_LIBRARY_PATH=/usr/lib make -C grpc install
+
+grpc/Makefile:
+	git clone -b v$(GRPC_RELEASE) https://github.com/grpc/grpc
+	cd grpc && git submodule update --init
+
+protobuf-cpp-3.5.1.tar.gz:
+	wget https://github.com/google/protobuf/releases/download/v3.5.1/protobuf-cpp-3.5.1.tar.gz
