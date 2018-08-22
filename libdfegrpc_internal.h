@@ -53,4 +53,5 @@ struct dialogflow_session {
     size_t packetsWritten;
     int responsesReceived;
     bool debug;
+    void *user_data;
 };

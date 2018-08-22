@@ -52,7 +52,12 @@ static void noop_log(enum dialogflow_log_level level, const char *file, int line
 {
 }
 
+static void noop_call_log(void *user_data, const char *event, size_t log_data_size, const struct dialogflow_log_data *data)
+{
+}
+
 static DF_LOG_FUNC parent_df_log = noop_log;
+static DF_CALL_LOG_FUNC df_log_call = noop_call_log;
 
 static void df_log(enum dialogflow_log_level level, const char *file, int line, const char *function, const char *fmt, ...)
 {
@@ -70,11 +75,15 @@ static void wrapper_grpc_log(gpr_log_func_args *args)
     df_log(df_level, args->file, args->line, "grpc", "%s\n", args->message);
 }
 
-
-int df_init(DF_LOG_FUNC log_function)
+int df_init(DF_LOG_FUNC log_function, DF_CALL_LOG_FUNC call_log_function)
 {
     grpc_init();
-    parent_df_log = log_function;
+    if (log_function) {
+        parent_df_log = log_function;
+    }
+    if (call_log_function) {
+        df_log_call = call_log_function;
+    }
     gpr_set_log_function(wrapper_grpc_log);
     gpr_set_log_verbosity(GPR_LOG_SEVERITY_DEBUG);
     return 0;
@@ -101,7 +110,7 @@ static std::shared_ptr<Channel> create_grpc_channel(const char *endpoint, const 
     return grpc::CreateChannel(endpoint, creds);
 }
 
-struct dialogflow_session *df_create_session(const char *endpoint, const char *auth_key)
+struct dialogflow_session *df_create_session(const char *endpoint, const char *auth_key, void *user_data)
 {
     struct dialogflow_session *session = new dialogflow_session();
     
@@ -125,8 +134,11 @@ struct dialogflow_session *df_create_session(const char *endpoint, const char *a
     session->auth_key = auth_key;
     session->endpoint = endpoint;
     session->session = std::move(Sessions::NewStub(session->channel));
+    session->user_data = user_data;
 
     df_log(LOG_DEBUG, "Channel to %s created\n", endpoint);
+    struct dialogflow_log_data create_data[] = { { "endpoint", endpoint } };
+    df_log_call(session->user_data, "create", 1, create_data);
 
     return session;
 }
@@ -135,8 +147,9 @@ int df_close_session(struct dialogflow_session *session)
 {
     session->lock.lock();
     df_log(LOG_DEBUG, "Destroying channel to %s for %s\n", session->endpoint.c_str(), session->session_id.c_str());
-
+    df_log_call(session->user_data, "destroy", 0, NULL);
     session->lock.unlock();
+    
     delete session;
 
     return 0;
@@ -252,6 +265,28 @@ template<typename T> static void make_audio_result(struct dialogflow_session *se
     }
 }
 
+static void log_responses(struct dialogflow_session *session, int score)
+{
+    size_t response_count = session->results.size();
+    struct dialogflow_log_data log_data[response_count + 1 /* for score */];
+    size_t i;
+    std::string score_string = std::to_string(score);
+
+    log_data[0].name = "score";
+    log_data[0].value = score_string.c_str();
+    
+    for (i = 0; i < response_count; i++) {
+        log_data[i + 1].name = session->results[i]->slot.c_str();
+        if (session->results[i]->slot == "output_audio") {
+            log_data[i + 1].value = "audio data";
+        } else {
+            log_data[i + 1].value = session->results[i]->value.c_str();
+        }
+    }
+
+    df_log_call(session->user_data, "results", response_count, log_data);
+}
+
 static void make_streaming_responses(struct dialogflow_session *session, std::shared_ptr<StreamingDetectIntentResponse> response)
 {
     /* a standard final response has:
@@ -274,6 +309,7 @@ static void make_streaming_responses(struct dialogflow_session *session, std::sh
         make_audio_result<StreamingDetectIntentResponse>(session, *session->audio_response, score);
     }
     make_query_result_responses(session, response->query_result(), score);
+    log_responses(session, score);
 }
 
 static void make_synchronous_responses(struct dialogflow_session *session, DetectIntentResponse& response)
@@ -284,9 +320,10 @@ static void make_synchronous_responses(struct dialogflow_session *session, Detec
     
     make_audio_result<DetectIntentResponse>(session, response, score);
     make_query_result_responses(session, response.query_result(), score);
+    log_responses(session, score);
 }
 
-int df_recognize_event(struct dialogflow_session *session, const char *event, const char *language)
+int df_recognize_event(struct dialogflow_session *session, const char *event, const char *language, int request_audio)
 {
     std::unique_lock<std::mutex> lock(session->lock);
 
@@ -309,14 +346,23 @@ int df_recognize_event(struct dialogflow_session *session, const char *event, co
     ClientContext context;
 
     request.set_session(session_path);
-    request.mutable_output_audio_config()->set_audio_encoding(google::cloud::dialogflow::v2beta1::OutputAudioEncoding::OUTPUT_AUDIO_ENCODING_LINEAR_16);
-    request.mutable_output_audio_config()->set_sample_rate_hertz(8000);
+    if (request_audio) {
+        request.mutable_output_audio_config()->set_audio_encoding(google::cloud::dialogflow::v2beta1::OutputAudioEncoding::OUTPUT_AUDIO_ENCODING_LINEAR_16);
+        request.mutable_output_audio_config()->set_sample_rate_hertz(8000);
+    }
     request.mutable_query_input()->mutable_event()->set_name(event);
     request.mutable_query_input()->mutable_event()->set_language_code(language);
 
     if (session->debug) {
         df_log(LOG_DEBUG, "REQUEST: %s\n", request.ShortDebugString().c_str());
     }
+
+    struct dialogflow_log_data log_data[] = {
+        { "event", event },
+        { "language", language },
+        { "session_path", session_path.c_str() }
+    };
+    df_log_call(session->user_data, "detect_event", 3, log_data);
 
     Status status = session->session->DetectIntent(&context, request, &response);
     if (!status.ok()) {
@@ -333,6 +379,8 @@ int df_recognize_event(struct dialogflow_session *session, const char *event, co
     make_synchronous_responses(session, response);
     session->responsesReceived = 1;
 
+    df_log_call(session->user_data, "stop", 0, NULL);
+
     session->state = DF_STATE_READY;
 
     return 0;
@@ -342,12 +390,14 @@ static void df_read_exec(struct dialogflow_session *session)
 {
     StreamingDetectIntentResponse response;
     bool debug;
+    void *user_data;
 
     std::unique_lock<std::mutex> lock(session->lock);
     std::string sessionId(session->session_id);
     std::shared_ptr<ClientReaderWriterInterface<StreamingDetectIntentRequest, StreamingDetectIntentResponse>> 
         current_request(session->current_request);
     debug = session->debug;
+    user_data = session->user_data;
     lock.unlock();
     while (current_request->Read(&response)) {
         lock.lock();
@@ -374,12 +424,19 @@ static void df_read_exec(struct dialogflow_session *session)
             lock.lock();
             session->final_response = std::make_shared<StreamingDetectIntentResponse>(response);
             lock.unlock();
+            struct dialogflow_log_data log_data[] = {
+                { "intent", response.query_result().intent().display_name().c_str() },
+                { "action", response.query_result().action().c_str() },
+                { "fulfillment_text", response.query_result().fulfillment_text().c_str() },
+            };
+            df_log_call(user_data, "query_result_received", 3, log_data);
         } else if (response.has_recognition_result()) {
             if (response.recognition_result().message_type() == 
                 google::cloud::dialogflow::v2beta1::StreamingRecognitionResult_MessageType::
                 StreamingRecognitionResult_MessageType_END_OF_SINGLE_UTTERANCE) {
                 df_log(LOG_DEBUG, "Got end of single utterance event for %s\n",
                     sessionId.c_str());
+                df_log_call(user_data, "end_of_utterance", 0, NULL);
             } else {
                 df_log(LOG_DEBUG, "Got interim response '%s' for %s\n",
                     response.recognition_result().transcript().c_str(),
@@ -390,6 +447,17 @@ static void df_read_exec(struct dialogflow_session *session)
                 if (response.has_output_audio_config()) {
                     df_log(LOG_DEBUG, "Interim response has audio config\n");
                 }
+                if (response.recognition_result().is_final()) {
+                    std::string score = std::to_string(response.recognition_result().confidence());
+                    struct dialogflow_log_data log_data[] = { 
+                        { "text", response.recognition_result().transcript().c_str() },
+                        { "score", score.c_str() }
+                    };
+                    df_log_call(user_data, "final_transcription", 2, log_data);
+                } else {
+                    struct dialogflow_log_data log_data[] = { { "text", response.recognition_result().transcript().c_str() }};
+                    df_log_call(user_data, "transcription", 1, log_data);
+                }
             }
         } else if (response.output_audio().length() == 0) { /* don't complain if it's got an audio bit */
             df_log(LOG_DEBUG, "Got unexpected response packet for %s\n", sessionId.c_str());
@@ -399,6 +467,7 @@ static void df_read_exec(struct dialogflow_session *session)
             lock.lock();
             session->audio_response = std::make_shared<StreamingDetectIntentResponse>(response);
             lock.unlock();
+            df_log_call(user_data, "audio_data", 0, NULL);
         } 
     }
 
@@ -411,7 +480,7 @@ static void df_read_exec(struct dialogflow_session *session)
     return;
 }
 
-int df_start_recognition(struct dialogflow_session *session, const char *language)
+int df_start_recognition(struct dialogflow_session *session, const char *language, int request_audio)
 {
     std::unique_lock<std::mutex> lock(session->lock);
 
@@ -424,7 +493,13 @@ int df_start_recognition(struct dialogflow_session *session, const char *languag
     std::string session_path = format("projects/%s/agent/sessions/%s", session->project_id.c_str(), session->session_id.c_str());
 
     df_log(LOG_DEBUG, "Session %s starting recognition to %s\n", session->session_id.c_str(), session_path.c_str());
-   
+
+    struct dialogflow_log_data log_data[] = {
+        { "language", cstr_or(language, "en") },
+        { "session_path", session_path.c_str() }
+    };
+    df_log_call(session->user_data, "detect_audio", 2, log_data);
+
     /* it didn't like assigning this to the session structure location */
     session->context.reset(new ClientContext());
     session->current_request = std::move(session->session->StreamingDetectIntent(session->context.get()));
@@ -435,11 +510,14 @@ int df_start_recognition(struct dialogflow_session *session, const char *languag
     request.mutable_query_input()->mutable_audio_config()->set_audio_encoding(google::cloud::dialogflow::v2beta1::AUDIO_ENCODING_MULAW);
     request.mutable_query_input()->mutable_audio_config()->set_sample_rate_hertz(8000);
     request.mutable_query_input()->mutable_audio_config()->set_language_code(cstr_or(language, "en"));
-    request.mutable_output_audio_config()->set_audio_encoding(google::cloud::dialogflow::v2beta1::OutputAudioEncoding::OUTPUT_AUDIO_ENCODING_LINEAR_16);
-    request.mutable_output_audio_config()->set_sample_rate_hertz(8000);
+    if (request_audio) {
+        request.mutable_output_audio_config()->set_audio_encoding(google::cloud::dialogflow::v2beta1::OutputAudioEncoding::OUTPUT_AUDIO_ENCODING_LINEAR_16);
+        request.mutable_output_audio_config()->set_sample_rate_hertz(8000);
+    }
 
     if (!session->current_request->Write(request)) {
         df_log(LOG_WARNING, "Session %s got error writing initial data packet to %s\n", session->session_id.c_str(), session->project_id.c_str());
+        df_log_call(session->user_data, "write_error", 0, NULL); 
         session->state = DF_STATE_ERROR;
         return -1;
     }
@@ -449,7 +527,7 @@ int df_start_recognition(struct dialogflow_session *session, const char *languag
 
     session->state = DF_STATE_STARTED;
     session->bytesWritten = 0;
-    session->packetsWritten = 0;
+    session->packetsWritten = 1;
     session->responsesReceived = 0;
 
     session->read_thread = std::thread(df_read_exec, session);
@@ -462,6 +540,8 @@ int df_stop_recognition(struct dialogflow_session *session)
     std::unique_lock<std::mutex> lock(session->lock);
     df_log(LOG_DEBUG, "Session %s stopping recognition to %s\n", session->session_id.c_str(), session->project_id.c_str());
 
+    df_log_call(session->user_data, "stopping", 0, NULL);
+
     if (session->state != DF_STATE_READY) {
         session->current_request->WritesDone();
 
@@ -473,8 +553,16 @@ int df_stop_recognition(struct dialogflow_session *session)
         if (!status.ok()) {
             df_log(LOG_WARNING, "Session %s got error performing streaming detection on %s: %s (%d: %s)\n", session->session_id.c_str(), session->project_id.c_str(),
                 status.error_message().c_str(), status.error_code(), status.error_details().c_str());
+            std::string error_code_string = std::to_string(status.error_code());
+            struct dialogflow_log_data log_data[] = {
+                { "message", status.error_message().c_str() },
+                { "details", status.error_details().c_str() }, 
+                { "error_code", error_code_string.c_str() }
+            };
+            df_log_call(session->user_data, "error", 3, log_data);
         }
     }
+    df_log_call(session->user_data, "stop", 0, NULL);
     session->state = DF_STATE_READY;
     return 0;
 }
@@ -506,6 +594,7 @@ enum dialogflow_session_state df_write_audio(struct dialogflow_session *session,
     if (!session->current_request->Write(request)) {
         df_log(LOG_WARNING, "Session %s got error writing audio data packet to %s\n", session->session_id.c_str(), session->project_id.c_str());
         state = session->state = DF_STATE_ERROR;
+        df_log_call(session->user_data, "write_error", 0, NULL); 
     }
     if (session->debug) {
         lock.unlock();

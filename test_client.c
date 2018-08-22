@@ -35,6 +35,16 @@ static void test_log(enum dialogflow_log_level level, const char *file, int line
     va_end(args);
 }
 
+static void test_call_log(void *user_data, const char *event, size_t log_data_size, const struct dialogflow_log_data *log_data)
+{
+    size_t i;
+    printf("CALL LOG: event=%s", event);
+    for (i = 0; i < log_data_size; i++) {
+        printf(" %s=%s", log_data[i].name, log_data[i].value);
+    }
+    printf("\n");
+}
+
 /* program keyfile projectid audiofile */
 int main(int argc, char *argv[])
 {
@@ -106,12 +116,12 @@ int main(int argc, char *argv[])
         }
     }
 
-    if (df_init(vtest_log)) {
+    if (df_init(vtest_log, test_call_log)) {
         test_log(LOG_ERROR, "Failure initializing library\n");
         return 20;
     }
 
-    session = df_create_session(NULL, keyfile);
+    session = df_create_session(NULL, keyfile, NULL);
     if (session == NULL) {
         test_log(LOG_ERROR, "Failed to create client session\n");
         return 25;
@@ -139,7 +149,7 @@ int main(int argc, char *argv[])
             return 15;
         }
 
-        if (df_start_recognition(session, NULL)) {
+        if (df_start_recognition(session, NULL, 0)) {
             test_log(LOG_ERROR, "Error starting recognition\n");
             return 50;
         }
@@ -181,7 +191,7 @@ int main(int argc, char *argv[])
             return 70;
         }
     } else {
-        if (df_recognize_event(session, event, NULL)) {
+        if (df_recognize_event(session, event, NULL, 0)) {
             test_log(LOG_ERROR, "Failure recognizing event\n");
             return 80;
         }
