@@ -546,7 +546,9 @@ int df_stop_recognition(struct dialogflow_session *session)
         session->current_request->WritesDone();
 
         lock.unlock();
-        session->read_thread.join();
+        if (session->read_thread.joinable()) {
+            session->read_thread.join();
+        }
         lock.lock();
 
         Status status = session->current_request->Finish();
