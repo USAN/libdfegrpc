@@ -6,7 +6,7 @@ CFLAGS = -g -Wall -O0 -DBUILDING_LIBDFEGRPC
 CXXFLAGS = -std=c++11 -fPIC -I. -Iprotos -Wall -g -O0 -DBUILDING_LIBDFEGRPC
 LDFLAGS = -shared
 
-VERSION ?= 1.0.0
+VERSION ?= $(shell git describe --tags --dirty=M 2> /dev/null | sed -e 's/[^/]*\///g' -e 's/-/_/g')
 GRPC_VERSION ?= 1.12.1
 
 GOOGLE_TEST_VERSION = release-1.8.0
@@ -114,6 +114,7 @@ libdfegrpc-$(VERSION)-1.x86_64.rpm libdfegrpc-devel-$(VERSION)-1.x86_64.rpm: Mak
 															libgrpc-devel-$(GRPC_VERSION)-1.x86_64.rpm \
 															.build/libdfegrpc_build
 	docker run --rm -v $(CURDIR):/src:ro \
+			-e VERSION=$(VERSION) \
 			-v $(CURDIR):/out \
 			-w /tmp libdfegrpc_build \
 			make -f /src/Makefile.dfedocker

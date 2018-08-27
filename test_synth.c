@@ -75,7 +75,7 @@ int main(int argc, const char *argv[])
         }
     }
 
-    if (df_init(vtest_log)) {
+    if (df_init(vtest_log, NULL)) {
         test_log(LOG_ERROR, "Failure initializing library\n");
         return 20;
     }
