@@ -287,7 +287,7 @@ static void log_responses(struct dialogflow_session *session, int score)
     df_log_call(session->user_data, "results", response_count, log_data);
 }
 
-static void make_streaming_responses(struct dialogflow_session *session, std::shared_ptr<StreamingDetectIntentResponse> response)
+static void make_streaming_responses(struct dialogflow_session *session)
 {
     /* a standard final response has:
         response_id
@@ -301,15 +301,17 @@ static void make_streaming_responses(struct dialogflow_session *session, std::sh
         some number of:
         query_result.fulfillment_messages
     */
-    int score = int(response->query_result().intent_detection_confidence() * 100);
+    if (session->final_response) {
+        int score = int(session->final_response->query_result().intent_detection_confidence() * 100);
     session->results.clear();
-    session->results.push_back(std::unique_ptr<df_result>(new df_result("response_id", response->response_id(), score)));
+        session->results.push_back(std::unique_ptr<df_result>(new df_result("response_id", session->final_response->response_id(), score)));
     
     if (session->audio_response) {
         make_audio_result<StreamingDetectIntentResponse>(session, *session->audio_response, score);
     }
-    make_query_result_responses(session, response->query_result(), score);
+        make_query_result_responses(session, session->final_response->query_result(), score);
     log_responses(session, score);
+}
 }
 
 static void make_synchronous_responses(struct dialogflow_session *session, DetectIntentResponse& response)
@@ -472,7 +474,7 @@ static void df_read_exec(struct dialogflow_session *session)
     }
 
     lock.lock();
-    make_streaming_responses(session, session->final_response);
+    make_streaming_responses(session);
     if (session->state != DF_STATE_ERROR) {
         session->state = DF_STATE_FINISHED;
     }
