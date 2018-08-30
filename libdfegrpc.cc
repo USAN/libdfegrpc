@@ -303,15 +303,15 @@ static void make_streaming_responses(struct dialogflow_session *session)
     */
     if (session->final_response) {
         int score = int(session->final_response->query_result().intent_detection_confidence() * 100);
-    session->results.clear();
+        session->results.clear();
         session->results.push_back(std::unique_ptr<df_result>(new df_result("response_id", session->final_response->response_id(), score)));
-    
-    if (session->audio_response) {
-        make_audio_result<StreamingDetectIntentResponse>(session, *session->audio_response, score);
-    }
+        
+        if (session->audio_response) {
+            make_audio_result<StreamingDetectIntentResponse>(session, *session->audio_response, score);
+        }
         make_query_result_responses(session, session->final_response->query_result(), score);
-    log_responses(session, score);
-}
+        log_responses(session, score);
+    }
 }
 
 static void make_synchronous_responses(struct dialogflow_session *session, DetectIntentResponse& response)
@@ -371,6 +371,16 @@ int df_recognize_event(struct dialogflow_session *session, const char *event, co
         df_log(LOG_WARNING, "Session %s got error performing event detection on %s: %s (%d: %s)\n", session->session_id.c_str(), session->project_id.c_str(),
             status.error_message().c_str(), status.error_code(), status.error_details().c_str());
         session->state = DF_STATE_READY;
+        std::string error_code_string = std::to_string(status.error_code());
+        struct dialogflow_log_data log_data[] = {
+            { "message", status.error_message().c_str() },
+            { "details", status.error_details().c_str() }, 
+            { "error_code", error_code_string.c_str() }
+        };
+        df_log_call(session->user_data, "error", 3, log_data);
+        session->results.push_back(std::unique_ptr<df_result>(new df_result("error", status.error_message(), 100)));
+        session->results.push_back(std::unique_ptr<df_result>(new df_result("error_details", status.error_details(), 100)));
+        session->results.push_back(std::unique_ptr<df_result>(new df_result("error_code", error_code_string, 100)));
         return -1;
     }
 
@@ -564,6 +574,9 @@ int df_stop_recognition(struct dialogflow_session *session)
                 { "error_code", error_code_string.c_str() }
             };
             df_log_call(session->user_data, "error", 3, log_data);
+            session->results.push_back(std::unique_ptr<df_result>(new df_result("error", status.error_message(), 100)));
+            session->results.push_back(std::unique_ptr<df_result>(new df_result("error_details", status.error_details(), 100)));
+            session->results.push_back(std::unique_ptr<df_result>(new df_result("error_code", error_code_string, 100)));
         }
     }
     df_log_call(session->user_data, "stop", 0, NULL);
