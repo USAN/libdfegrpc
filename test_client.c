@@ -121,11 +121,12 @@ int main(int argc, char *argv[])
         return 20;
     }
 
-    session = df_create_session(NULL, keyfile, NULL);
+    session = df_create_session(NULL);
     if (session == NULL) {
         test_log(LOG_ERROR, "Failed to create client session\n");
         return 25;
     }
+    df_set_auth_key(session, keyfile);
     df_set_session_id(session, "testclient");
     df_set_debug(session, 1);
 
