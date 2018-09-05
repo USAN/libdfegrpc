@@ -211,8 +211,24 @@ static std::string format(const std::string& format, ...)
     return &vec[0];
 }
 
+static std::string make_indexed_name(std::string name, int index)
+{
+    if (index == 0) {
+        return name;
+    } else {
+        return format("%s_%d", name.c_str(), index);
+    }
+}
+
 static void make_query_result_responses(struct dialogflow_session *session, const QueryResult &query_result, int score)
 {
+    int text_count = 0;
+    int simple_response_count = 0;
+    int play_audio_count = 0;
+    int synthesize_speech_count = 0;
+    int transfer_call_count = 0;
+    int terminate_call_count = 0;
+
     session->results.push_back(std::unique_ptr<df_result>(new df_result("query_text", query_result.query_text(), score)));
     session->results.push_back(std::unique_ptr<df_result>(new df_result("language_code", query_result.language_code(), score)));
     session->results.push_back(std::unique_ptr<df_result>(new df_result("action", query_result.action(), score)));
@@ -227,7 +243,7 @@ static void make_query_result_responses(struct dialogflow_session *session, cons
         if (msg.has_text()) {
             int texts = msg.text().text_size();
             for (int j = 0; j < texts; j++) {
-                session->results.push_back(std::unique_ptr<df_result>(new df_result(format("fulfillment_message_%d_text_%d", i, j), msg.text().text(j), score)));
+                session->results.push_back(std::unique_ptr<df_result>(new df_result(make_indexed_name("text", text_count++), msg.text().text(j), score)));
             }
         } else if (msg.has_simple_responses()) {
             int rspns = msg.simple_responses().simple_responses_size();
@@ -235,22 +251,22 @@ static void make_query_result_responses(struct dialogflow_session *session, cons
                 const std::string& tts = msg.simple_responses().simple_responses(j).text_to_speech();
                 const std::string& ssml = msg.simple_responses().simple_responses(j).ssml();
 
-                session->results.push_back(std::unique_ptr<df_result>(new df_result(format("fulfillment_message_%d_simple_response_%d", i, j),
+                session->results.push_back(std::unique_ptr<df_result>(new df_result(make_indexed_name("simple_response", simple_response_count++),
                     tts.length() ? tts : ssml, score)));
             }
         } else if (msg.has_telephony_play_audio()) {
-            session->results.push_back(std::unique_ptr<df_result>(new df_result(format("fulfillment_message_%d_telephony_play_audio", i),
+            session->results.push_back(std::unique_ptr<df_result>(new df_result(make_indexed_name("play_audio", play_audio_count++),
                 msg.telephony_play_audio().audio_uri(), score)));
         } else if (msg.has_telephony_synthesize_speech()) {
             const std::string& tts = msg.telephony_synthesize_speech().text();
             const std::string& ssml = msg.telephony_synthesize_speech().ssml();
-            session->results.push_back(std::unique_ptr<df_result>(new df_result(format("fulfillment_message_%d_telephony_synthesize_speech", i),
+            session->results.push_back(std::unique_ptr<df_result>(new df_result(make_indexed_name("synthesize_speech", synthesize_speech_count++),
                 tts.length() ? tts : ssml, score)));
         } else if (msg.has_telephony_transfer_call()) {
-            session->results.push_back(std::unique_ptr<df_result>(new df_result(format("fulfillment_message_%d_telephony_transfer_call", i),
+            session->results.push_back(std::unique_ptr<df_result>(new df_result(make_indexed_name("transfer_call", transfer_call_count++),
                 msg.telephony_transfer_call().phone_number(), score)));
         } else if (msg.has_telephony_terminate_call()) {
-            session->results.push_back(std::unique_ptr<df_result>(new df_result(format("fulfillment_message_%d_telephony_terminate_call", i),
+            session->results.push_back(std::unique_ptr<df_result>(new df_result(make_indexed_name("terminate_call", terminate_call_count++),
                 "true", score)));
         }
     }
