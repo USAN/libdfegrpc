@@ -89,11 +89,11 @@ int df_init(DF_LOG_FUNC log_function, DF_CALL_LOG_FUNC call_log_function)
     return 0;
 }
 
-static std::shared_ptr<Channel> create_grpc_channel(const char *endpoint, const char *auth_key)
+static std::shared_ptr<Channel> create_grpc_channel(const std::string& endpoint, const std::string& auth_key)
 {
     std::shared_ptr<grpc::ChannelCredentials> creds;
 
-    if (!cstrlen_zero(auth_key)) {
+    if (auth_key.length() > 0) {
         auto svcAcct = grpc::ServiceAccountJWTAccessCredentials(auth_key, 3600);
         if (svcAcct == nullptr) {
             df_log(LOG_ERROR, "Service account credentials failed to load, will attempt to use default credentials.\n");
@@ -105,12 +105,12 @@ static std::shared_ptr<Channel> create_grpc_channel(const char *endpoint, const 
         creds = grpc::GoogleDefaultCredentials();
     }
 
-    df_log(LOG_INFO, "Creating DF session to %s\n", endpoint);
+    df_log(LOG_INFO, "Creating DF session to %s\n", endpoint.c_str());
 
     return grpc::CreateChannel(endpoint, creds);
 }
 
-struct dialogflow_session *df_create_session(const char *endpoint, const char *auth_key, void *user_data)
+struct dialogflow_session *df_create_session(void *user_data)
 {
     struct dialogflow_session *session = new dialogflow_session();
     
@@ -119,28 +119,45 @@ struct dialogflow_session *df_create_session(const char *endpoint, const char *a
         return nullptr;
     }
 
+    session->state = DF_STATE_READY;
+    session->user_data = user_data;
+    session->endpoint = "dialogflow.googleapis.com";
+
+    df_log_call(session->user_data, "create", 0, nullptr);
+
+    return session;
+}
+
+static void df_disconnect_locked(struct dialogflow_session *session)
+{
+    session->session = nullptr;
+    session->channel = nullptr;
+}
+
+int df_set_endpoint(struct dialogflow_session *session, const char *endpoint)
+{
+    std::lock_guard<std::mutex> lock(session->lock);
     if (cstrlen_zero(endpoint)) {
         endpoint = "dialogflow.googleapis.com";
     }
 
-    session->channel = create_grpc_channel(endpoint, auth_key);
-    if (session->channel == nullptr) {
-        df_log(LOG_ERROR, "Failed to create channel to %s\n", endpoint);
-        delete session;
-        return nullptr;
+    if (strcasecmp(session->endpoint.c_str(), endpoint)) {
+        session->endpoint = endpoint;
+        df_disconnect_locked(session);
     }
 
-    session->state = DF_STATE_READY;
-    session->auth_key = auth_key;
-    session->endpoint = endpoint;
-    session->session = std::move(Sessions::NewStub(session->channel));
-    session->user_data = user_data;
+    return 0;
+}
 
-    df_log(LOG_DEBUG, "Channel to %s created\n", endpoint);
-    struct dialogflow_log_data create_data[] = { { "endpoint", endpoint } };
-    df_log_call(session->user_data, "create", 1, create_data);
+int df_set_auth_key(struct dialogflow_session *session, const char *auth_key)
+{
+    std::lock_guard<std::mutex> lock(session->lock);
+    if (strcasecmp(session->auth_key.c_str(), auth_key)) {
+        session->auth_key = auth_key;
+        df_disconnect_locked(session);
+    }
 
-    return session;
+    return 0;
 }
 
 int df_close_session(struct dialogflow_session *session)
@@ -325,6 +342,27 @@ static void make_synchronous_responses(struct dialogflow_session *session, Detec
     log_responses(session, score);
 }
 
+static bool is_session_connected(struct dialogflow_session *session)
+{
+    return (session->channel != nullptr);
+}
+
+static void ensure_connected(struct dialogflow_session *session)
+{
+    if (!is_session_connected(session)) {
+        session->channel = create_grpc_channel(session->endpoint, session->auth_key);
+        if (session->channel == nullptr) {
+            df_log(LOG_ERROR, "Failed to create channel to %s\n", session->endpoint.c_str());
+        } else {
+            session->session = std::move(Sessions::NewStub(session->channel));
+
+            df_log(LOG_DEBUG, "Channel to %s created\n", session->endpoint.c_str());
+            struct dialogflow_log_data create_data[] = { { "endpoint", session->endpoint.c_str() } };
+            df_log_call(session->user_data, "connect", 1, create_data);
+        }
+    }
+}
+
 int df_recognize_event(struct dialogflow_session *session, const char *event, const char *language, int request_audio)
 {
     std::unique_lock<std::mutex> lock(session->lock);
@@ -333,6 +371,13 @@ int df_recognize_event(struct dialogflow_session *session, const char *event, co
         lock.unlock();
         df_stop_recognition(session);
         lock.lock();
+    }
+
+    ensure_connected(session);
+
+    if (!is_session_connected(session)) {
+        session->results.push_back(std::unique_ptr<df_result>(new df_result("error", "Failed to connect", 100)));
+        return -1;
     }
 
     if (cstrlen_zero(language)) {
@@ -500,6 +545,13 @@ int df_start_recognition(struct dialogflow_session *session, const char *languag
         lock.unlock();
         df_stop_recognition(session);
         lock.lock();
+    }
+
+    ensure_connected(session);
+
+    if (!is_session_connected(session)) {
+        session->results.push_back(std::unique_ptr<df_result>(new df_result("error", "Failed to connect", 100)));
+        return -1;
     }
 
     std::string session_path = format("projects/%s/agent/sessions/%s", session->project_id.c_str(), session->session_id.c_str());
