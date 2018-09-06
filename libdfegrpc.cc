@@ -589,6 +589,7 @@ int df_start_recognition(struct dialogflow_session *session, const char *languag
     request.set_single_utterance(true);
     request.mutable_query_input()->mutable_audio_config()->set_audio_encoding(google::cloud::dialogflow::v2beta1::AUDIO_ENCODING_MULAW);
     request.mutable_query_input()->mutable_audio_config()->set_sample_rate_hertz(8000);
+    request.mutable_query_input()->mutable_audio_config()->set_model("phone_call");
     request.mutable_query_input()->mutable_audio_config()->set_language_code(cstr_or(language, "en"));
     if (request_audio) {
         request.mutable_output_audio_config()->set_audio_encoding(google::cloud::dialogflow::v2beta1::OutputAudioEncoding::OUTPUT_AUDIO_ENCODING_LINEAR_16);
