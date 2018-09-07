@@ -220,6 +220,49 @@ static std::string make_indexed_name(std::string name, int index)
     }
 }
 
+static void push_parameter_result(std::vector<std::unique_ptr<df_result>> &results, const std::string &name, const ::google::protobuf::Value &value, int score)
+{
+    ::google::protobuf::Value::KindCase kind = value.kind_case();
+    if (kind == ::google::protobuf::Value::KindCase::kStructValue) {
+        /* nested */
+        ::google::protobuf::Map<std::string, ::google::protobuf::Value> parameters = value.struct_value().fields();
+        for (auto iterator = parameters.begin(); iterator != parameters.end(); ++iterator) {
+            const std::string subname = iterator->first;
+            const ::google::protobuf::Value subvalue = iterator->second;
+            push_parameter_result(results, name + "_" + subname, subvalue, score);
+        }
+    } else if (kind == ::google::protobuf::Value::KindCase::kListValue) {
+        /* nested-ish */
+        const ::google::protobuf::ListValue list_value = value.list_value();
+        int list_size = list_value.values_size();
+        for (int i = 0; i < list_size; i++) {
+            const ::google::protobuf::Value sub_value = list_value.values(i);
+            push_parameter_result(results, name + "_" + std::to_string(i), sub_value, score);
+        }
+    } else {
+        /* simple value */
+        std::string result;
+        switch (kind) {
+            case ::google::protobuf::Value::KindCase::kNullValue:
+                result = "null";
+                break;
+            case ::google::protobuf::Value::KindCase::kNumberValue:
+                result = std::to_string(value.number_value());
+                break;
+            case ::google::protobuf::Value::KindCase::kStringValue:
+                result = value.string_value();
+                break;
+            case ::google::protobuf::Value::KindCase::kBoolValue:
+                result = value.bool_value() ? "true" : "false";
+                break;
+            default: 
+                result = "unknown type";
+                break;
+        }
+        results.push_back(std::unique_ptr<df_result>(new df_result(name, result, score)));
+    }
+}
+
 static void make_query_result_responses(struct dialogflow_session *session, const QueryResult &query_result, int score)
 {
     int text_count = 0;
@@ -269,6 +312,13 @@ static void make_query_result_responses(struct dialogflow_session *session, cons
             session->results.push_back(std::unique_ptr<df_result>(new df_result(make_indexed_name("terminate_call", terminate_call_count++),
                 "true", score)));
         }
+    }
+
+    ::google::protobuf::Map<std::string, ::google::protobuf::Value> parameters = query_result.parameters().fields();
+    for (auto iterator = parameters.begin(); iterator != parameters.end(); ++iterator) {
+        const std::string name = iterator->first;
+        const ::google::protobuf::Value value = iterator->second;
+        push_parameter_result(session->results, name, value, score);
     }
 }
 
