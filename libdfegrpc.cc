@@ -607,7 +607,7 @@ int df_start_recognition(struct dialogflow_session *session, const char *languag
 {
     std::unique_lock<std::mutex> lock(session->lock);
 
-    if (session->state == DF_STATE_STARTED) {
+    if (session->state != DF_STATE_READY) {
         lock.unlock();
         df_stop_recognition(session);
         lock.lock();
@@ -675,11 +675,16 @@ int df_stop_recognition(struct dialogflow_session *session)
     if (session->state != DF_STATE_READY) {
         session->current_request->WritesDone();
 
-        lock.unlock();
         if (session->read_thread.joinable()) {
+            lock.unlock();
             session->read_thread.join();
+            lock.lock();
         }
-        lock.lock();
+
+        if (session->state == DF_STATE_READY) {
+            /* while unlocked someone beat us to it */
+            return 0;
+        }
 
         Status status = session->current_request->Finish();
         if (!status.ok()) {
