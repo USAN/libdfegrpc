@@ -198,6 +198,13 @@ const char *df_get_project_id(struct dialogflow_session *session)
     return session->project_id.c_str();
 }
 
+int df_set_request_sentiment_analysis(struct dialogflow_session *session, int request_sentiment_analysis)
+{
+    std::lock_guard<std::mutex> lock(session->lock);
+    session->request_sentiment_analysis = (request_sentiment_analysis != 0);
+    return 0;
+}
+
 static std::string format(const std::string& format, ...)
 {
     va_list args;
@@ -319,6 +326,12 @@ static void make_query_result_responses(struct dialogflow_session *session, cons
         const std::string name = iterator->first;
         const ::google::protobuf::Value value = iterator->second;
         push_parameter_result(session->results, name, value, score);
+    }
+
+    if (query_result.has_sentiment_analysis_result() && query_result.sentiment_analysis_result().has_query_text_sentiment()) {
+        auto sentiment = query_result.sentiment_analysis_result().query_text_sentiment();
+        session->results.push_back(std::unique_ptr<df_result>(new df_result("sentiment_score", format("%f", sentiment.score()), score)));
+        session->results.push_back(std::unique_ptr<df_result>(new df_result("sentiment_magnitude", format("%f", sentiment.magnitude()), score)));
     }
 }
 
@@ -643,6 +656,10 @@ int df_start_recognition(struct dialogflow_session *session, const char *languag
     if (request_audio) {
         request.mutable_output_audio_config()->set_audio_encoding(google::cloud::dialogflow::v2beta1::OutputAudioEncoding::OUTPUT_AUDIO_ENCODING_LINEAR_16);
         request.mutable_output_audio_config()->set_sample_rate_hertz(8000);
+    }
+    if (session->request_sentiment_analysis) {
+        request.mutable_query_params()->mutable_sentiment_analysis_request_config()->set_analyze_query_text_sentiment(1);
+        request.mutable_query_params()->mutable_sentiment_analysis_request_config()->set_analyze_conversation_text_sentiment(1);
     }
 
     if (!session->current_request->Write(request)) {

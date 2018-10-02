@@ -150,6 +150,8 @@ int main(int argc, char *argv[])
             return 15;
         }
 
+        df_set_request_sentiment_analysis(session, 1);
+
         if (df_start_recognition(session, NULL, 0)) {
             test_log(LOG_ERROR, "Error starting recognition\n");
             return 50;
