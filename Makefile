@@ -112,7 +112,8 @@ libgrpc-$(GRPC_VERSION)-1.x86_64.rpm libgrpc-devel-$(GRPC_VERSION)-1.x86_64.rpm:
 libdfegrpc-$(VERSION)-1.x86_64.rpm libdfegrpc-devel-$(VERSION)-1.x86_64.rpm: Makefile.dfedocker \
 															libgrpc-$(GRPC_VERSION)-1.x86_64.rpm \
 															libgrpc-devel-$(GRPC_VERSION)-1.x86_64.rpm \
-															.build/libdfegrpc_build
+															.build/libdfegrpc_build \
+															libdfegrpc.cc libdfegrpc.h libdfegrpc_internal.h
 	docker run --rm -v $(CURDIR):/src:ro \
 			-e VERSION=$(VERSION) \
 			-v $(CURDIR):/out \
