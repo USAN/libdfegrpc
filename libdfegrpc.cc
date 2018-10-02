@@ -364,7 +364,8 @@ template<typename T> static void make_audio_result(struct dialogflow_session *se
 static void log_responses(struct dialogflow_session *session, int score)
 {
     size_t response_count = session->results.size();
-    struct dialogflow_log_data log_data[response_count + 1 /* for score */];
+    size_t log_data_size = response_count + 1; /* for score */
+    struct dialogflow_log_data log_data[log_data_size];
     size_t i;
     std::string score_string = std::to_string(score);
 
@@ -380,7 +381,7 @@ static void log_responses(struct dialogflow_session *session, int score)
         }
     }
 
-    df_log_call(session->user_data, "results", response_count, log_data);
+    df_log_call(session->user_data, "results", log_data_size, log_data);
 }
 
 static void make_streaming_responses(struct dialogflow_session *session)
