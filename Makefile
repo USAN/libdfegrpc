@@ -112,9 +112,24 @@ libgrpc-$(GRPC_VERSION)-1.x86_64.rpm libgrpc-devel-$(GRPC_VERSION)-1.x86_64.rpm:
 libdfegrpc-$(VERSION)-1.x86_64.rpm libdfegrpc-devel-$(VERSION)-1.x86_64.rpm: Makefile.dfedocker \
 															libgrpc-$(GRPC_VERSION)-1.x86_64.rpm \
 															libgrpc-devel-$(GRPC_VERSION)-1.x86_64.rpm \
-															.build/libdfegrpc_build
+															.build/libdfegrpc_build \
+															libdfegrpc.cc libdfegrpc.h libdfegrpc_internal.h
 	docker run --rm -v $(CURDIR):/src:ro \
 			-e VERSION=$(VERSION) \
 			-v $(CURDIR):/out \
 			-w /tmp libdfegrpc_build \
 			make -f /src/Makefile.dfedocker
+
+.PHONY = docker-test
+docker-test: docker-build
+	docker run --rm -v $(CURDIR):/src:ro \
+			-e VERSION=$(VERSION) \
+			-e COFFEE_SHOP_KEY_PATH=$(COFFEE_SHOP_KEY_PATH) \
+			-e COFFEE_SHOP_PROJECT_ID=$(COFFEE_SHOP_PROJECT_ID) \
+			libdfegrpc_build \
+			make -C /src run-test
+
+.PHONY = run-test
+run-test:
+		rpm -ivh $(RPMS)
+		dfegrpc_test_client -a coffee_please.ul -k $(COFFEE_SHOP_KEY_PATH) -p $(COFFEE_SHOP_PROJECT_ID)
