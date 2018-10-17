@@ -40,7 +40,14 @@ static void test_call_log(void *user_data, const char *event, size_t log_data_si
     size_t i;
     printf("CALL LOG: event=%s", event);
     for (i = 0; i < log_data_size; i++) {
-        printf(" %s=%s", log_data[i].name, log_data[i].value);
+        if (log_data[i].value_type == dialogflow_log_data_value_type_string) {
+            printf(" %s=%s", log_data[i].name, (const char *) log_data[i].value);
+        } else if (log_data[i].value_type == dialogflow_log_data_value_type_array_of_string) {
+            size_t j;
+            for (j = 0; j < log_data[i].value_count; j++) {
+                printf(" %s[%d]=%s", log_data[i].name, (int)j, ((const char **) log_data[i].value)[j]);
+            }
+        }
     }
     printf("\n");
 }
@@ -53,12 +60,14 @@ int main(int argc, char *argv[])
     const char *projectid = NULL;
     const char *audiofile = NULL;
     const char *event = NULL;
+    const char *hints[10];
+    size_t hints_count = 0;
 
     struct dialogflow_session *session;
     int i = 0;
     char c;
 
-    while ((c = getopt(argc, argv, "k:p:a:e:")) != -1) {
+    while ((c = getopt(argc, argv, "k:p:a:e:h:")) != -1) {
         switch (c) {
             case 'k':
                 keyfile = optarg;
@@ -71,6 +80,13 @@ int main(int argc, char *argv[])
                 break;
             case 'e':
                 event = optarg;
+                break;
+            case 'h':
+                if (hints_count >= 10) {
+                    test_log(LOG_ERROR, "Too many hints\n");
+                    return 2;
+                }
+                hints[hints_count++] = optarg;
                 break;
             case '?':
             default:
@@ -152,7 +168,7 @@ int main(int argc, char *argv[])
 
         df_set_request_sentiment_analysis(session, 1);
 
-        if (df_start_recognition(session, NULL, 0)) {
+        if (df_start_recognition(session, NULL, 0, hints, hints_count)) {
             test_log(LOG_ERROR, "Error starting recognition\n");
             return 50;
         }

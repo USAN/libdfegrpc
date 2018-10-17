@@ -48,6 +48,8 @@ using google::cloud::texttospeech::v1beta1::SynthesizeSpeechResponse;
 #define cstrlen_zero(str)   (((str) == nullptr) || ((*str) == '\0'))
 #define cstr_or(str, alt)   (cstrlen_zero(str) ? (alt) : (str))
 
+#define ARRAY_LEN(a) (size_t) (sizeof(a) / sizeof(0[a]))
+
 static void noop_log(enum dialogflow_log_level level, const char *file, int line, const char *function, const char *fmt, va_list args)
 {
 }
@@ -617,7 +619,8 @@ static void df_read_exec(struct dialogflow_session *session)
     return;
 }
 
-int df_start_recognition(struct dialogflow_session *session, const char *language, int request_audio)
+int df_start_recognition(struct dialogflow_session *session, const char *language, int request_audio,
+    const char **hints, size_t hints_count)
 {
     std::unique_lock<std::mutex> lock(session->lock);
 
@@ -640,9 +643,12 @@ int df_start_recognition(struct dialogflow_session *session, const char *languag
 
     struct dialogflow_log_data log_data[] = {
         { "language", cstr_or(language, "en") },
-        { "session_path", session_path.c_str() }
+        { "session_path", session_path.c_str() },
+        { "hints", hints, dialogflow_log_data_value_type_array_of_string, hints_count },
+        { "request_sentiment_analysis", session->request_sentiment_analysis ? "true" : "false" },
+        { "request_audio", request_audio ? "true" : "false" }
     };
-    df_log_call(session->user_data, "detect_audio", 2, log_data);
+    df_log_call(session->user_data, "start", ARRAY_LEN(log_data), log_data);
 
     /* it didn't like assigning this to the session structure location */
     session->context.reset(new ClientContext());
@@ -654,6 +660,9 @@ int df_start_recognition(struct dialogflow_session *session, const char *languag
     request.mutable_query_input()->mutable_audio_config()->set_audio_encoding(google::cloud::dialogflow::v2beta1::AUDIO_ENCODING_MULAW);
     request.mutable_query_input()->mutable_audio_config()->set_sample_rate_hertz(8000);
     request.mutable_query_input()->mutable_audio_config()->set_language_code(cstr_or(language, "en"));
+    for (size_t i = 0; i < hints_count; i++) {
+        request.mutable_query_input()->mutable_audio_config()->add_phrase_hints(hints[i]);
+    }
     if (request_audio) {
         request.mutable_output_audio_config()->set_audio_encoding(google::cloud::dialogflow::v2beta1::OutputAudioEncoding::OUTPUT_AUDIO_ENCODING_LINEAR_16);
         request.mutable_output_audio_config()->set_sample_rate_hertz(8000);
