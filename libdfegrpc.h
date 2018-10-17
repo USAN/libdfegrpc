@@ -35,9 +35,16 @@ struct dialogflow_result {
     int score;
 };
 
+enum dialogflow_log_data_value_type {
+    dialogflow_log_data_value_type_string = 0,
+    dialogflow_log_data_value_type_array_of_string
+};
+
 struct dialogflow_log_data {
     const char *name;
-    const char *value;
+    const void *value;
+    enum dialogflow_log_data_value_type value_type;
+    size_t value_count;
 };
 
 typedef void (*DF_LOG_FUNC)(enum dialogflow_log_level level, const char *file, int line, const char *function, const char *fmt, va_list args);
