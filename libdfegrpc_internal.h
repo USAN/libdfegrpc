@@ -45,6 +45,7 @@ struct dialogflow_session {
 	std::shared_ptr<google::cloud::dialogflow::v2beta1::Sessions::Sessions::StubInterface> session;
     std::shared_ptr<grpc::ClientReaderWriterInterface<google::cloud::dialogflow::v2beta1::StreamingDetectIntentRequest, google::cloud::dialogflow::v2beta1::StreamingDetectIntentResponse>> current_request;
     std::unique_ptr<grpc::ClientContext> context;
+    std::shared_ptr<google::cloud::dialogflow::v2beta1::StreamingDetectIntentResponse> transcription_response;
     std::shared_ptr<google::cloud::dialogflow::v2beta1::StreamingDetectIntentResponse> final_response;
     std::shared_ptr<google::cloud::dialogflow::v2beta1::StreamingDetectIntentResponse> audio_response;
     std::vector<std::unique_ptr<df_result>> results;

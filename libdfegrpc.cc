@@ -409,6 +409,10 @@ static void make_streaming_responses(struct dialogflow_session *session)
             make_audio_result<StreamingDetectIntentResponse>(session, *session->audio_response, score);
         }
         make_query_result_responses(session, session->final_response->query_result(), score);
+        if (session->transcription_response) {
+            float speech_score = session->transcription_response->recognition_result().confidence();
+            session->results.push_back(std::unique_ptr<df_result>(new df_result("speech_score", std::to_string(speech_score), score)));
+        }
         log_responses(session, score);
     }
 }
@@ -593,6 +597,9 @@ static void df_read_exec(struct dialogflow_session *session)
                         { "score", score.c_str() }
                     };
                     df_log_call(user_data, "final_transcription", 2, log_data);
+                    lock.lock();
+                    session->transcription_response = std::make_shared<StreamingDetectIntentResponse>(response);
+                    lock.unlock();
                 } else {
                     struct dialogflow_log_data log_data[] = { { "text", response.recognition_result().transcript().c_str() }};
                     df_log_call(user_data, "transcription", 1, log_data);
