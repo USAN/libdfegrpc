@@ -35,9 +35,16 @@ struct dialogflow_result {
     int score;
 };
 
+enum dialogflow_log_data_value_type {
+    dialogflow_log_data_value_type_string = 0,
+    dialogflow_log_data_value_type_array_of_string
+};
+
 struct dialogflow_log_data {
     const char *name;
-    const char *value;
+    const void *value;
+    enum dialogflow_log_data_value_type value_type;
+    size_t value_count;
 };
 
 typedef void (*DF_LOG_FUNC)(enum dialogflow_log_level level, const char *file, int line, const char *function, const char *fmt, va_list args);
@@ -54,7 +61,7 @@ extern LIBDFEGRPC_DLL_EXPORTED int df_set_project_id(struct dialogflow_session *
 extern LIBDFEGRPC_DLL_EXPORTED const char *df_get_project_id(struct dialogflow_session *session);
 extern LIBDFEGRPC_DLL_EXPORTED int df_set_request_sentiment_analysis(struct dialogflow_session *session, int request_sentiment_analysis);
 extern LIBDFEGRPC_DLL_EXPORTED int df_recognize_event(struct dialogflow_session *session, const char *event, const char *language, int request_audio);
-extern LIBDFEGRPC_DLL_EXPORTED int df_start_recognition(struct dialogflow_session *session, const char *language, int request_audio);
+extern LIBDFEGRPC_DLL_EXPORTED int df_start_recognition(struct dialogflow_session *session, const char *language, int request_audio, const char **hints, size_t hints_count);
 extern LIBDFEGRPC_DLL_EXPORTED int df_stop_recognition(struct dialogflow_session *session);
 extern LIBDFEGRPC_DLL_EXPORTED enum dialogflow_session_state df_write_audio(struct dialogflow_session *session, const char *samples, size_t sample_count);
 extern LIBDFEGRPC_DLL_EXPORTED enum dialogflow_session_state df_get_state(struct dialogflow_session *session);
