@@ -375,6 +375,7 @@ static void log_responses(struct dialogflow_session *session, int score)
     log_data[0].value = score_string.c_str();
     
     for (i = 0; i < response_count; i++) {
+        log_data[i + 1].value_type = dialogflow_log_data_value_type_string;
         log_data[i + 1].name = session->results[i]->slot.c_str();
         if (session->results[i]->slot == "output_audio") {
             log_data[i + 1].value = "audio data";
