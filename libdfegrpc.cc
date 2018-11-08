@@ -463,6 +463,7 @@ int df_recognize_event(struct dialogflow_session *session, const char *event, co
     ensure_connected(session);
 
     if (!is_session_connected(session)) {
+        session->results.clear();
         session->results.push_back(std::unique_ptr<df_result>(new df_result("error", "Failed to connect", 100)));
         return -1;
     }
@@ -510,6 +511,7 @@ int df_recognize_event(struct dialogflow_session *session, const char *event, co
             { "error_code", error_code_string.c_str() }
         };
         df_log_call(session->user_data, "error", 3, log_data);
+        session->results.clear();
         session->results.push_back(std::unique_ptr<df_result>(new df_result("error", status.error_message(), 100)));
         session->results.push_back(std::unique_ptr<df_result>(new df_result("error_details", status.error_details(), 100)));
         session->results.push_back(std::unique_ptr<df_result>(new df_result("error_code", error_code_string, 100)));
@@ -641,6 +643,7 @@ int df_start_recognition(struct dialogflow_session *session, const char *languag
     ensure_connected(session);
 
     if (!is_session_connected(session)) {
+        session->results.clear();
         session->results.push_back(std::unique_ptr<df_result>(new df_result("error", "Failed to connect", 100)));
         return -1;
     }
@@ -732,6 +735,7 @@ int df_stop_recognition(struct dialogflow_session *session)
                 { "error_code", error_code_string.c_str() }
             };
             df_log_call(session->user_data, "error", 3, log_data);
+            session->results.clear();
             session->results.push_back(std::unique_ptr<df_result>(new df_result("error", status.error_message(), 100)));
             session->results.push_back(std::unique_ptr<df_result>(new df_result("error_details", status.error_details(), 100)));
             session->results.push_back(std::unique_ptr<df_result>(new df_result("error_code", error_code_string, 100)));
