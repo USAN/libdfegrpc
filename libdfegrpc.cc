@@ -164,10 +164,16 @@ int df_set_auth_key(struct dialogflow_session *session, const char *auth_key)
 
 int df_close_session(struct dialogflow_session *session)
 {
-    session->lock.lock();
+    std::unique_lock<std::mutex> lock(session->lock);
+
+    if (session->state != DF_STATE_READY) {
+        lock.unlock();
+        df_stop_recognition(session);
+        lock.lock();
+    }
     df_log(LOG_DEBUG, "Destroying channel to %s for %s\n", session->endpoint.c_str(), session->session_id.c_str());
     df_log_call(session->user_data, "destroy", 0, NULL);
-    session->lock.unlock();
+    lock.unlock();
     
     delete session;
 
