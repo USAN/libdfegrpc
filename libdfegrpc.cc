@@ -445,15 +445,23 @@ static void ensure_connected(struct dialogflow_session *session)
     if (!is_session_connected(session)) {
         session->channel = create_grpc_channel(session->endpoint, session->auth_key);
         if (session->channel == nullptr) {
-            df_log(LOG_ERROR, "Failed to create channel to %s\n", session->endpoint.c_str());
+            df_log(LOG_ERROR, "Failed to create channel to %s for %s\n", session->endpoint.c_str(), session->session_id.c_str());
         } else {
+            session->channel->GetState(true);
             session->session = std::move(Sessions::NewStub(session->channel));
 
-            df_log(LOG_DEBUG, "Channel to %s created\n", session->endpoint.c_str());
+            df_log(LOG_DEBUG, "Channel to %s created for %s\n", session->endpoint.c_str(), session->session_id.c_str());
             struct dialogflow_log_data create_data[] = { { "endpoint", session->endpoint.c_str() } };
             df_log_call(session->user_data, "connect", 1, create_data);
         }
+    } else {
+        session->channel->GetState(true);
     }
+}
+
+void df_connect(struct dialogflow_session *session)
+{
+    ensure_connected(session);
 }
 
 int df_recognize_event(struct dialogflow_session *session, const char *event, const char *language, int request_audio)
