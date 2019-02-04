@@ -229,5 +229,9 @@ int main(int argc, char *argv[])
 
     df_close_session(session);
 
+    session = NULL;
+
+    df_shutdown();
+
     return 0;
 }
