@@ -51,6 +51,7 @@ typedef void (*DF_LOG_FUNC)(enum dialogflow_log_level level, const char *file, i
 typedef void (*DF_CALL_LOG_FUNC)(void *user_data, const char *event, size_t log_data_size, const struct dialogflow_log_data *data);
 
 extern LIBDFEGRPC_DLL_EXPORTED int df_init(DF_LOG_FUNC log_function, DF_CALL_LOG_FUNC call_log_function);
+extern LIBDFEGRPC_DLL_EXPORTED int df_shutdown(void);
 extern LIBDFEGRPC_DLL_EXPORTED struct dialogflow_session *df_create_session(void *user_data);
 extern LIBDFEGRPC_DLL_EXPORTED int df_close_session(struct dialogflow_session *session);
 extern LIBDFEGRPC_DLL_EXPORTED int df_set_auth_key(struct dialogflow_session *session, const char *auth_key);

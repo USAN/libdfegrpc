@@ -91,6 +91,12 @@ int df_init(DF_LOG_FUNC log_function, DF_CALL_LOG_FUNC call_log_function)
     return 0;
 }
 
+int df_shutdown(void)
+{
+    grpc_shutdown();
+    return 0;
+}
+
 static std::shared_ptr<Channel> create_grpc_channel(const std::string& endpoint, const std::string& auth_key)
 {
     std::shared_ptr<grpc::ChannelCredentials> creds;
@@ -174,7 +180,7 @@ int df_close_session(struct dialogflow_session *session)
     df_log(LOG_DEBUG, "Destroying channel to %s for %s\n", session->endpoint.c_str(), session->session_id.c_str());
     df_log_call(session->user_data, "destroy", 0, NULL);
     lock.unlock();
-    
+
     delete session;
 
     return 0;
