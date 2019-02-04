@@ -60,7 +60,7 @@ int main(int argc, char *argv[])
     const char *projectid = NULL;
     const char *audiofile = NULL;
     const char *event = NULL;
-    const char *hints[10];
+    const char *hints[10] = { "\0" };
     size_t hints_count = 0;
 
     struct dialogflow_session *session;
