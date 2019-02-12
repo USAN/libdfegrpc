@@ -62,12 +62,13 @@ int main(int argc, char *argv[])
     const char *event = NULL;
     const char *hints[10] = { "\0" };
     size_t hints_count = 0;
+    int count = 1;
 
     struct dialogflow_session *session;
     int i = 0;
     char c;
 
-    while ((c = getopt(argc, argv, "k:p:a:e:h:")) != -1) {
+    while ((c = getopt(argc, argv, "k:p:a:e:h:n:")) != -1) {
         switch (c) {
             case 'k':
                 keyfile = optarg;
@@ -80,6 +81,9 @@ int main(int argc, char *argv[])
                 break;
             case 'e':
                 event = optarg;
+                break;
+            case 'n':
+                count = atoi(optarg);
                 break;
             case 'h':
                 if (hints_count >= 10) {
@@ -137,99 +141,102 @@ int main(int argc, char *argv[])
         return 20;
     }
 
-    session = df_create_session(NULL);
-    if (session == NULL) {
-        test_log(LOG_ERROR, "Failed to create client session\n");
-        return 25;
-    }
-    df_set_auth_key(session, keyfile);
-    df_set_session_id(session, "testclient");
-    df_set_debug(session, 1);
+    while (count-- > 0) {
 
-    if (!session) {
-        test_log(LOG_ERROR, "Error creating session\n");
-        return 30;
-    }
+        session = df_create_session(NULL);
+        if (session == NULL) {
+            test_log(LOG_ERROR, "Failed to create client session\n");
+            return 25;
+        }
+        df_set_auth_key(session, keyfile);
+        df_set_session_id(session, "testclient");
+        df_set_debug(session, 1);
 
-    if (df_set_project_id(session, projectid)) {
-        test_log(LOG_ERROR, "Error setting project id\n");
-        return 40;
-    }
-
-    if (audiofile) {
-        FILE *audio;
-        int responseCount = 0;
-
-        audio = fopen(audiofile, "rb");
-        if (!audio) {
-            test_log(LOG_ERROR, "Error opening audio file %s -- %d\n", audiofile, errno);
-            return 15;
+        if (!session) {
+            test_log(LOG_ERROR, "Error creating session\n");
+            return 30;
         }
 
-        df_set_request_sentiment_analysis(session, 1);
-
-        if (df_start_recognition(session, NULL, 0, hints, hints_count)) {
-            test_log(LOG_ERROR, "Error starting recognition\n");
-            return 50;
+        if (df_set_project_id(session, projectid)) {
+            test_log(LOG_ERROR, "Error setting project id\n");
+            return 40;
         }
 
-        test_log(LOG_DEBUG, "Recognition started -- %d\n", df_get_rpc_state(session));
+        if (audiofile) {
+            FILE *audio;
+            int responseCount = 0;
 
-        while (!feof(audio) && !ferror(audio)) {
-            enum dialogflow_session_state state;
-            char buffer[160];
-            int newResponseCount;
-            size_t read = fread(buffer, sizeof(char), sizeof(buffer), audio);
-            if (read < sizeof(buffer)) {
-                memset(buffer + read, 0x7f, sizeof(buffer) - read);
-            }
-            /* dc - this doesn't seem necessary anymore */
-            usleep(20 * 1000);
-            if (++i % 100 == 1) {
-                test_log(LOG_DEBUG, "Writing audio...\n");
-            }
-            state = df_write_audio(session, buffer, sizeof(buffer));
-
-            if (state != DF_STATE_STARTED) {
-                break;
+            audio = fopen(audiofile, "rb");
+            if (!audio) {
+                test_log(LOG_ERROR, "Error opening audio file %s -- %d\n", audiofile, errno);
+                return 15;
             }
 
-            newResponseCount = df_get_response_count(session);
-            if (responseCount == 0 && newResponseCount > 0) {
-                test_log(LOG_DEBUG, "Got %d response(s)\n", newResponseCount);
+            df_set_request_sentiment_analysis(session, 1);
+
+            if (df_start_recognition(session, NULL, 0, hints, hints_count)) {
+                test_log(LOG_ERROR, "Error starting recognition\n");
+                return 50;
             }
-            responseCount = newResponseCount;
-        }
 
-        fclose(audio);
+            test_log(LOG_DEBUG, "Recognition started -- %d\n", df_get_rpc_state(session));
 
-        test_log(LOG_DEBUG, "Finished writing audio\n");
+            while (!feof(audio) && !ferror(audio)) {
+                enum dialogflow_session_state state;
+                char buffer[160];
+                int newResponseCount;
+                size_t read = fread(buffer, sizeof(char), sizeof(buffer), audio);
+                if (read < sizeof(buffer)) {
+                    memset(buffer + read, 0x7f, sizeof(buffer) - read);
+                }
+                /* dc - this doesn't seem necessary anymore */
+                usleep(20 * 1000);
+                if (++i % 100 == 1) {
+                    test_log(LOG_DEBUG, "Writing audio...\n");
+                }
+                state = df_write_audio(session, buffer, sizeof(buffer));
 
-        if (df_stop_recognition(session)) {
-            test_log(LOG_ERROR, "Error stopping recognition\n");
-            return 70;
-        }
-    } else {
-        if (df_recognize_event(session, event, NULL, 0)) {
-            test_log(LOG_ERROR, "Failure recognizing event\n");
-            return 80;
-        }
-    } 
+                if (state != DF_STATE_STARTED) {
+                    break;
+                }
 
-    int resultcount = df_get_result_count(session);
-    test_log(LOG_DEBUG, "Found %d results:\n", resultcount);
-    for (i = 0; i < resultcount; i++) {
-        struct dialogflow_result *result = df_get_result(session, i);
-        if (strcasecmp(result->slot, "output_audio")) {
-            test_log(LOG_DEBUG, "Result %d: '%s' = '%s' (%d)\n", i, result->slot, result->value, result->score);
+                newResponseCount = df_get_response_count(session);
+                if (responseCount == 0 && newResponseCount > 0) {
+                    test_log(LOG_DEBUG, "Got %d response(s)\n", newResponseCount);
+                }
+                responseCount = newResponseCount;
+            }
+
+            fclose(audio);
+
+            test_log(LOG_DEBUG, "Finished writing audio\n");
+
+            if (df_stop_recognition(session)) {
+                test_log(LOG_ERROR, "Error stopping recognition\n");
+                return 70;
+            }
         } else {
-            test_log(LOG_DEBUG, "Result %d: '%s' = %d bytes of audio\n", i, result->slot, result->valueLen);
+            if (df_recognize_event(session, event, NULL, 0)) {
+                test_log(LOG_ERROR, "Failure recognizing event\n");
+                return 80;
+            }
+        } 
+
+        int resultcount = df_get_result_count(session);
+        test_log(LOG_DEBUG, "Found %d results:\n", resultcount);
+        for (i = 0; i < resultcount; i++) {
+            struct dialogflow_result *result = df_get_result(session, i);
+            if (strcasecmp(result->slot, "output_audio")) {
+                test_log(LOG_DEBUG, "Result %d: '%s' = '%s' (%d)\n", i, result->slot, result->value, result->score);
+            } else {
+                test_log(LOG_DEBUG, "Result %d: '%s' = %d bytes of audio\n", i, result->slot, result->valueLen);
+            }
         }
+
+        df_close_session(session);
+
+        session = NULL;
     }
-
-    df_close_session(session);
-
-    session = NULL;
 
     df_shutdown();
 
