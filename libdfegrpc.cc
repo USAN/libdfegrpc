@@ -385,6 +385,7 @@ static void log_responses(struct dialogflow_session *session, int score)
 
     log_data[0].name = "score";
     log_data[0].value = score_string.c_str();
+    log_data[0].value_type = dialogflow_log_data_value_type_string;
     
     for (i = 0; i < response_count; i++) {
         log_data[i + 1].value_type = dialogflow_log_data_value_type_string;
