@@ -7,6 +7,7 @@
 #include <mutex>
 #include <fstream>
 #include <iostream>
+#include <sys/time.h>
 
 #include "libdfegrpc.h"
 #include "libdfegrpc_internal.h"
@@ -77,6 +78,13 @@ static void wrapper_grpc_log(gpr_log_func_args *args)
     df_log(df_level, args->file, args->line, "grpc", "%s\n", args->message);
 }
 
+static timeval tvnow(void)
+{
+	timeval t;
+	gettimeofday(&t, NULL);
+	return t;
+}
+
 int df_init(DF_LOG_FUNC log_function, DF_CALL_LOG_FUNC call_log_function)
 {
     grpc_init();
@@ -88,6 +96,12 @@ int df_init(DF_LOG_FUNC log_function, DF_CALL_LOG_FUNC call_log_function)
     }
     gpr_set_log_function(wrapper_grpc_log);
     gpr_set_log_verbosity(GPR_LOG_SEVERITY_DEBUG);
+    return 0;
+}
+
+int df_shutdown(void)
+{
+    grpc_shutdown();
     return 0;
 }
 
@@ -174,7 +188,7 @@ int df_close_session(struct dialogflow_session *session)
     df_log(LOG_DEBUG, "Destroying channel to %s for %s\n", session->endpoint.c_str(), session->session_id.c_str());
     df_log_call(session->user_data, "destroy", 0, NULL);
     lock.unlock();
-    
+
     delete session;
 
     return 0;
@@ -379,6 +393,7 @@ static void log_responses(struct dialogflow_session *session, int score)
 
     log_data[0].name = "score";
     log_data[0].value = score_string.c_str();
+    log_data[0].value_type = dialogflow_log_data_value_type_string;
     
     for (i = 0; i < response_count; i++) {
         log_data[i + 1].value_type = dialogflow_log_data_value_type_string;
@@ -513,7 +528,10 @@ int df_recognize_event(struct dialogflow_session *session, const char *event, co
     };
     df_log_call(session->user_data, "detect_event", 3, log_data);
 
+    session->session_start_time = tvnow();
+    session->last_transcription_time = tvnow();
     Status status = session->session->DetectIntent(&context, request, &response);
+    session->intent_detected_time = tvnow();
     if (!status.ok()) {
         df_log(LOG_WARNING, "Session %s got error performing event detection on %s: %s (%d: %s)\n", session->session_id.c_str(), session->project_id.c_str(),
             status.error_message().c_str(), status.error_code(), status.error_details().c_str());
@@ -582,6 +600,7 @@ static void df_read_exec(struct dialogflow_session *session)
                 df_log(LOG_DEBUG, "Final response has audio config\n");
             }
             lock.lock();
+            session->intent_detected_time = tvnow();
             session->final_response = std::make_shared<StreamingDetectIntentResponse>(response);
             lock.unlock();
             struct dialogflow_log_data log_data[] = {
@@ -615,11 +634,15 @@ static void df_read_exec(struct dialogflow_session *session)
                     };
                     df_log_call(user_data, "final_transcription", 2, log_data);
                     lock.lock();
+                    session->last_transcription_time = tvnow();
                     session->transcription_response = std::make_shared<StreamingDetectIntentResponse>(response);
                     lock.unlock();
                 } else {
                     struct dialogflow_log_data log_data[] = { { "text", response.recognition_result().transcript().c_str() }};
                     df_log_call(user_data, "transcription", 1, log_data);
+                    lock.lock();
+                    session->last_transcription_time = tvnow();
+                    lock.unlock();
                 }
             }
         } else if (response.output_audio().length() == 0) { /* don't complain if it's got an audio bit */
@@ -675,6 +698,7 @@ int df_start_recognition(struct dialogflow_session *session, const char *languag
     };
     df_log_call(session->user_data, "start", ARRAY_LEN(log_data), log_data);
 
+    session->session_start_time = tvnow();
     /* it didn't like assigning this to the session structure location */
     session->context.reset(new ClientContext());
     session->current_request = std::move(session->session->StreamingDetectIntent(session->context.get()));
@@ -843,6 +867,26 @@ void df_set_debug(struct dialogflow_session *session, int debug)
     std::lock_guard<std::mutex> lock(session->lock);
     session->debug = (debug != 0);
 }
+
+struct timeval df_get_session_start_time(struct dialogflow_session *session)
+{
+    std::lock_guard<std::mutex> lock(session->lock);
+    return session->session_start_time;
+}
+
+struct timeval df_get_session_last_transcription_time(struct dialogflow_session *session)
+{
+    std::lock_guard<std::mutex> lock(session->lock);
+    return session->last_transcription_time;
+}
+
+struct timeval df_get_session_intent_detected_time(struct dialogflow_session *session)
+{
+    std::lock_guard<std::mutex> lock(session->lock);
+    return session->intent_detected_time;
+}
+
+
 
 int google_synth_speech(const char *endpoint, const char *svc_key, const char *text, const char *language, const char *voice_name, const char *destination_filename)
 {

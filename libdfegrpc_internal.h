@@ -56,4 +56,7 @@ struct dialogflow_session {
     bool request_sentiment_analysis;
     bool debug;
     void *user_data;
+    timeval session_start_time;
+    timeval last_transcription_time;
+    timeval intent_detected_time;
 };
