@@ -746,9 +746,9 @@ int df_stop_recognition(struct dialogflow_session *session)
     std::unique_lock<std::mutex> lock(session->lock);
     df_log(LOG_DEBUG, "Session %s stopping recognition to %s\n", session->session_id.c_str(), session->project_id.c_str());
 
-    df_log_call(session->user_data, "stopping", 0, NULL);
-
     if (session->state != DF_STATE_READY) {
+        df_log_call(session->user_data, "stopping", 0, NULL);
+
         session->current_request->WritesDone();
 
         if (session->read_thread.joinable()) {
@@ -778,9 +778,9 @@ int df_stop_recognition(struct dialogflow_session *session)
             session->results.push_back(std::unique_ptr<df_result>(new df_result("error_details", status.error_details(), 100)));
             session->results.push_back(std::unique_ptr<df_result>(new df_result("error_code", error_code_string, 100)));
         }
+        df_log_call(session->user_data, "stop", 0, NULL);
+        session->state = DF_STATE_READY;
     }
-    df_log_call(session->user_data, "stop", 0, NULL);
-    session->state = DF_STATE_READY;
     return 0;
 }
 
