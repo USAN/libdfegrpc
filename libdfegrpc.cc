@@ -711,7 +711,8 @@ int df_start_recognition(struct dialogflow_session *session, const char *languag
         { "hints", hints, dialogflow_log_data_value_type_array_of_string, hints_count },
         { "request_sentiment_analysis", session->request_sentiment_analysis ? "true" : "false" },
         { "request_audio", request_audio ? "true" : "false" },
-        { "single_utterance", session->use_external_endpointer == false ? "true" : "false" }
+        { "single_utterance", session->use_external_endpointer == false ? "true" : "false" },
+        { "model", session->model.c_str() }
     };
     df_log_call(session->user_data, "start", ARRAY_LEN(log_data), log_data);
 
