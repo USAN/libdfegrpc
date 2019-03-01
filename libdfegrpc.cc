@@ -227,6 +227,14 @@ int df_set_request_sentiment_analysis(struct dialogflow_session *session, int re
     return 0;
 }
 
+/*!! Indicate that the client program will provide end of speech indication */
+int df_set_use_external_endpointer(struct dialogflow_session *session, int use_external_endpointer)
+{
+    std::lock_guard<std::mutex> lock(session->lock);
+    session->use_external_endpointer = (use_external_endpointer != 0);
+    return 0;
+}
+
 static std::string format(const std::string& format, ...)
 {
     va_list args;
@@ -694,7 +702,8 @@ int df_start_recognition(struct dialogflow_session *session, const char *languag
         { "session_path", session_path.c_str() },
         { "hints", hints, dialogflow_log_data_value_type_array_of_string, hints_count },
         { "request_sentiment_analysis", session->request_sentiment_analysis ? "true" : "false" },
-        { "request_audio", request_audio ? "true" : "false" }
+        { "request_audio", request_audio ? "true" : "false" },
+        { "single_utterance", session->use_external_endpointer == false ? "true" : "false" }
     };
     df_log_call(session->user_data, "start", ARRAY_LEN(log_data), log_data);
 
@@ -705,7 +714,7 @@ int df_start_recognition(struct dialogflow_session *session, const char *languag
 
     StreamingDetectIntentRequest request;
     request.set_session(session_path);
-    request.set_single_utterance(true);
+    request.set_single_utterance(session->use_external_endpointer == false);
     request.mutable_query_input()->mutable_audio_config()->set_audio_encoding(google::cloud::dialogflow::v2beta1::AUDIO_ENCODING_MULAW);
     request.mutable_query_input()->mutable_audio_config()->set_sample_rate_hertz(8000);
     request.mutable_query_input()->mutable_audio_config()->set_language_code(cstr_or(language, "en"));

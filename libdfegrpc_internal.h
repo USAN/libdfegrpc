@@ -54,6 +54,7 @@ struct dialogflow_session {
     size_t packetsWritten;
     int responsesReceived;
     bool request_sentiment_analysis;
+    bool use_external_endpointer;
     bool debug;
     void *user_data;
     timeval session_start_time;
