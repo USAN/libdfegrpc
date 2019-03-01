@@ -40,6 +40,7 @@ struct dialogflow_session {
     std::string endpoint;
     std::string session_id;
     std::string project_id;
+    std::string model;
     enum dialogflow_session_state state;
 	std::shared_ptr<grpc::Channel> channel;
 	std::shared_ptr<google::cloud::dialogflow::v2beta1::Sessions::Sessions::StubInterface> session;

@@ -235,6 +235,14 @@ int df_set_use_external_endpointer(struct dialogflow_session *session, int use_e
     return 0;
 }
 
+/*!! Set the model for use by the intent detection request */
+int df_set_model(struct dialogflow_session *session, const char *model)
+{
+    std::lock_guard<std::mutex> lock(session->lock);
+    session->model = model;
+    return 0;
+}
+
 static std::string format(const std::string& format, ...)
 {
     va_list args;
@@ -718,6 +726,9 @@ int df_start_recognition(struct dialogflow_session *session, const char *languag
     request.mutable_query_input()->mutable_audio_config()->set_audio_encoding(google::cloud::dialogflow::v2beta1::AUDIO_ENCODING_MULAW);
     request.mutable_query_input()->mutable_audio_config()->set_sample_rate_hertz(8000);
     request.mutable_query_input()->mutable_audio_config()->set_language_code(cstr_or(language, "en"));
+    if (!session->model.empty()) {
+        request.mutable_query_input()->mutable_audio_config()->set_model(session->model);
+    }
     for (size_t i = 0; i < hints_count; i++) {
         request.mutable_query_input()->mutable_audio_config()->add_phrase_hints(hints[i]);
     }
