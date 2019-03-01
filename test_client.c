@@ -61,6 +61,7 @@ int main(int argc, char *argv[])
     const char *audiofile = NULL;
     const char *event = NULL;
     const char *hints[10] = { "\0" };
+    const char *model = NULL;
     int single_utterance = 0;
     size_t hints_count = 0;
     int count = 1;
@@ -69,7 +70,7 @@ int main(int argc, char *argv[])
     int i = 0;
     char c;
 
-    while ((c = getopt(argc, argv, "k:p:a:e:h:n:s")) != -1) {
+    while ((c = getopt(argc, argv, "k:p:a:e:h:n:sm:")) != -1) {
         switch (c) {
             case 'k':
                 keyfile = optarg;
@@ -95,6 +96,9 @@ int main(int argc, char *argv[])
                 break;
             case 's':
                 single_utterance++;
+                break;
+            case 'm':
+                model = optarg;
                 break;
             case '?':
             default:
@@ -156,6 +160,9 @@ int main(int argc, char *argv[])
         df_set_session_id(session, "testclient");
         df_set_debug(session, 1);
         df_set_use_external_endpointer(session, !single_utterance);
+        if (model) {
+            df_set_model(session, model);
+        }
 
         if (!session) {
             test_log(LOG_ERROR, "Error creating session\n");
