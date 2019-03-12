@@ -726,7 +726,7 @@ int df_start_recognition(struct dialogflow_session *session, const char *languag
     request.set_single_utterance(session->use_external_endpointer == false);
     request.mutable_query_input()->mutable_audio_config()->set_audio_encoding(google::cloud::dialogflow::v2beta1::AUDIO_ENCODING_MULAW);
     request.mutable_query_input()->mutable_audio_config()->set_sample_rate_hertz(8000);
-    request.mutable_query_input()->mutable_audio_config()->set_language_code(cstr_or(language, "en"));
+    request.mutable_query_input()->mutable_audio_config()->set_language_code(cstr_or(language, "en-US"));
     if (!session->model.empty()) {
         request.mutable_query_input()->mutable_audio_config()->set_model(session->model);
     }
