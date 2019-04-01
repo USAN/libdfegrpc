@@ -186,8 +186,8 @@ int df_close_session(struct dialogflow_session *session)
         lock.lock();
     }
     df_log(LOG_DEBUG, "Destroying channel to %s for %s\n", session->endpoint.c_str(), session->session_id.c_str());
-    df_log_call(session->user_data, "destroy", 0, NULL);
     lock.unlock();
+    df_log_call(session->user_data, "destroy", 0, NULL);
 
     delete session;
 
@@ -401,6 +401,7 @@ template<typename T> static void make_audio_result(struct dialogflow_session *se
 
 static void log_responses(struct dialogflow_session *session, int score)
 {
+    std::unique_lock<std::mutex> lock(session->lock);
     size_t response_count = session->results.size();
     size_t log_data_size = response_count + 1; /* for score */
     struct dialogflow_log_data log_data[log_data_size];
@@ -421,11 +422,14 @@ static void log_responses(struct dialogflow_session *session, int score)
         }
     }
 
+    lock.unlock();
     df_log_call(session->user_data, "results", log_data_size, log_data);
 }
 
 static void make_streaming_responses(struct dialogflow_session *session)
 {
+    std::unique_lock<std::mutex> lock(session->lock);
+
     /* a standard final response has:
         response_id
         query_result.query_text (with score)
@@ -451,18 +455,21 @@ static void make_streaming_responses(struct dialogflow_session *session)
             float speech_score = session->transcription_response->recognition_result().confidence();
             session->results.push_back(std::unique_ptr<df_result>(new df_result("speech_score", std::to_string(speech_score), score)));
         }
+        lock.unlock();
         log_responses(session, score);
     }
 }
 
 static void make_synchronous_responses(struct dialogflow_session *session, DetectIntentResponse& response)
 {
+    std::unique_lock<std::mutex> lock(session->lock);
     int score = int(response.query_result().intent_detection_confidence() * 100);
     session->results.clear();
     session->results.push_back(std::unique_ptr<df_result>(new df_result("response_id", response.response_id(), score)));
     
     make_audio_result<DetectIntentResponse>(session, response, score);
     make_query_result_responses(session, response.query_result(), score);
+    lock.unlock();
     log_responses(session, score);
 }
 
@@ -473,6 +480,7 @@ static bool is_session_connected(struct dialogflow_session *session)
 
 static void ensure_connected(struct dialogflow_session *session)
 {
+    std::unique_lock<std::mutex> lock(session->lock);
     if (!is_session_connected(session)) {
         session->channel = create_grpc_channel(session->endpoint, session->auth_key);
         if (session->channel == nullptr) {
@@ -483,6 +491,7 @@ static void ensure_connected(struct dialogflow_session *session)
 
             df_log(LOG_DEBUG, "Channel to %s created for %s\n", session->endpoint.c_str(), session->session_id.c_str());
             struct dialogflow_log_data create_data[] = { { "endpoint", session->endpoint.c_str() } };
+            lock.unlock();
             df_log_call(session->user_data, "connect", 1, create_data);
         }
     } else {
@@ -505,7 +514,9 @@ int df_recognize_event(struct dialogflow_session *session, const char *event, co
         lock.lock();
     }
 
+    lock.unlock();
     ensure_connected(session);
+    lock.lock();
 
     if (!is_session_connected(session)) {
         session->results.clear();
@@ -542,7 +553,9 @@ int df_recognize_event(struct dialogflow_session *session, const char *event, co
         { "language", language },
         { "session_path", session_path.c_str() }
     };
+    lock.unlock();
     df_log_call(session->user_data, "detect_event", 3, log_data);
+    lock.lock();
 
     session->session_start_time = tvnow();
     session->last_transcription_time = tvnow();
@@ -558,7 +571,9 @@ int df_recognize_event(struct dialogflow_session *session, const char *event, co
             { "details", status.error_details().c_str() }, 
             { "error_code", error_code_string.c_str() }
         };
+        lock.unlock();
         df_log_call(session->user_data, "error", 3, log_data);
+        lock.lock();
         session->results.clear();
         session->results.push_back(std::unique_ptr<df_result>(new df_result("error", status.error_message(), 100)));
         session->results.push_back(std::unique_ptr<df_result>(new df_result("error_details", status.error_details(), 100)));
@@ -570,11 +585,13 @@ int df_recognize_event(struct dialogflow_session *session, const char *event, co
         df_log(LOG_DEBUG, "RESPONSE: %s\n", response.ShortDebugString().c_str());
     }
 
-    make_synchronous_responses(session, response);
-    session->responsesReceived = 1;
+    lock.unlock();
 
+    make_synchronous_responses(session, response);
     df_log_call(session->user_data, "stop", 0, NULL);
 
+    lock.lock();
+    session->responsesReceived = 1;
     session->state = DF_STATE_READY;
 
     return 0;
@@ -672,9 +689,9 @@ static void df_read_exec(struct dialogflow_session *session)
             df_log_call(user_data, "audio_data", 0, NULL);
         } 
     }
-
-    lock.lock();
+    
     make_streaming_responses(session);
+    lock.lock();
     if (session->state != DF_STATE_ERROR) {
         session->state = DF_STATE_FINISHED;
     }
@@ -693,7 +710,9 @@ int df_start_recognition(struct dialogflow_session *session, const char *languag
         lock.lock();
     }
 
+    lock.unlock();
     ensure_connected(session);
+    lock.lock();
 
     if (!is_session_connected(session)) {
         session->results.clear();
@@ -714,7 +733,9 @@ int df_start_recognition(struct dialogflow_session *session, const char *languag
         { "single_utterance", session->use_external_endpointer == false ? "true" : "false" },
         { "model", session->model.c_str() }
     };
+    lock.unlock();
     df_log_call(session->user_data, "start", ARRAY_LEN(log_data), log_data);
+    lock.lock();
 
     session->session_start_time = tvnow();
     /* it didn't like assigning this to the session structure location */
@@ -744,8 +765,9 @@ int df_start_recognition(struct dialogflow_session *session, const char *languag
 
     if (!session->current_request->Write(request)) {
         df_log(LOG_WARNING, "Session %s got error writing initial data packet to %s\n", session->session_id.c_str(), session->project_id.c_str());
-        df_log_call(session->user_data, "write_error", 0, NULL); 
         session->state = DF_STATE_ERROR;
+        lock.unlock();
+        df_log_call(session->user_data, "write_error", 0, NULL); 
         return -1;
     }
     if (session->debug) {
@@ -768,7 +790,9 @@ int df_stop_recognition(struct dialogflow_session *session)
     df_log(LOG_DEBUG, "Session %s stopping recognition to %s\n", session->session_id.c_str(), session->project_id.c_str());
 
     if (session->state != DF_STATE_READY) {
+        lock.unlock();
         df_log_call(session->user_data, "stopping", 0, NULL);
+        lock.lock();
 
         session->current_request->WritesDone();
 
@@ -793,13 +817,17 @@ int df_stop_recognition(struct dialogflow_session *session)
                 { "details", status.error_details().c_str() }, 
                 { "error_code", error_code_string.c_str() }
             };
+            lock.unlock();
             df_log_call(session->user_data, "error", 3, log_data);
+            lock.lock();
             session->results.clear();
             session->results.push_back(std::unique_ptr<df_result>(new df_result("error", status.error_message(), 100)));
             session->results.push_back(std::unique_ptr<df_result>(new df_result("error_details", status.error_details(), 100)));
             session->results.push_back(std::unique_ptr<df_result>(new df_result("error_code", error_code_string, 100)));
         }
+        lock.unlock();
         df_log_call(session->user_data, "stop", 0, NULL);
+        lock.lock();
         session->state = DF_STATE_READY;
     }
     return 0;
@@ -832,15 +860,14 @@ enum dialogflow_session_state df_write_audio(struct dialogflow_session *session,
     if (!session->current_request->Write(request)) {
         df_log(LOG_WARNING, "Session %s got error writing audio data packet to %s\n", session->session_id.c_str(), session->project_id.c_str());
         state = session->state = DF_STATE_ERROR;
+        lock.unlock();
         df_log_call(session->user_data, "write_error", 0, NULL); 
     }
     if (session->debug) {
         lock.unlock();
         df_log(LOG_DEBUG, "REQUEST: %s\n", request.ShortDebugString().c_str());
-    } else {
-        lock.unlock();
     }
-    
+
     return state;
 }
 
