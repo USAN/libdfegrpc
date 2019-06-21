@@ -2,6 +2,7 @@
 
 RELEASE="v1.12.x"
 LATEST=$(curl -s -L https://grpc.io/release)
+PROTOBUF_RELEASE="3.5.1"
 
 log() {
     printf "\e[93m${1}\e[39m\n"
@@ -25,23 +26,23 @@ else
 fi
 
 pushd /tmp
-if [ ! -e protobuf-cpp-3.5.1.tar.gz ]; then
-    log "Getting protobuf-cpp-3.5.1.tar.gz"
-    wget https://github.com/google/protobuf/releases/download/v3.5.1/protobuf-cpp-3.5.1.tar.gz
+if [ ! -e protobuf-cpp-${PROTOBUF_RELEASE}.tar.gz ]; then
+    log "Getting protobuf-cpp-${PROTOBUF_RELEASE}.tar.gz"
+    wget https://github.com/google/protobuf/releases/download/v${PROTOBUF_RELEASE}/protobuf-cpp-${PROTOBUF_RELEASE}.tar.gz
 else 
     log "Protobuf release archive already downloaded"
 fi
 
-if [ ! -e protobuf-3.5.1 ]; then
+if [ ! -e protobuf-${PROTOBUF_RELEASE} ]; then
     log "Extracting protobuf source"
-    tar -x -z -f protobuf-cpp-3.5.1.tar.gz
+    tar -x -z -f protobuf-cpp-${PROTOBUF_RELEASE}.tar.gz
 else 
     log "Protobuf release archive already untarred"
 fi
 
 if [ ! -x "$(command -v protoc)" ]; then
     log "Building protobuffer..."
-    pushd protobuf-3.5.1
+    pushd protobuf-${PROTOBUF_RELEASE}
     ./configure --prefix=/usr && make && sudo make install
     popd
 else
