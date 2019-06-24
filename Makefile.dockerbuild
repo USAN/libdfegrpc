@@ -1,0 +1,66 @@
+VERSION ?= $(shell git describe --tags --dirty=M 2> /dev/null | sed -e 's/[^/]*\///g' -e 's/-/_/g')
+GRPC_VERSION ?= 1.12.x
+
+ARCH = $(shell uname -m)
+ITERATION = 1
+DISTRIBUTION = el6
+
+LIBGRPC_RPM = libgrpc-$(GRPC_VERSION)-$(ITERATION).$(DISTRIBUTION).$(ARCH).rpm
+LIBGRPC_DEVEL_RPM = libgrpc-devel-$(GRPC_VERSION)-$(ITERATION).$(DISTRIBUTION).$(ARCH).rpm
+LIBDFEGRPC_RPM = libdfegrpc-$(VERSION)-$(ITERATION).$(DISTRIBUTION).$(ARCH).rpm 
+LIBDFEGRPC_DEVEL_RPM = libdfegrpc-devel-$(VERSION)-$(ITERATION).$(DISTRIBUTION).$(ARCH).rpm
+
+RPMS = $(LIBGRPC_RPM) $(LIBGRPC_DEVEL_RPM) $(LIBDFEGRPC_RPM) $(LIBDFEGRPC_DEVEL_RPM)
+
+.PHONY: all
+all: $(RPMS)
+
+.build:
+	mkdir -p $@
+
+.build/libdfegrpc_build: Dockerfile.$(DISTRIBUTION) .build
+	docker build -f Dockerfile.$(DISTRIBUTION) --tag libdfegrpc_build:latest .
+	@touch "$@"
+
+$(LIBGRPC_RPM) $(LIBGRPC_DEVEL_RPM): Makefile.grpcdocker .build/libdfegrpc_build
+	docker run --rm -v $(CURDIR):/src:ro \
+			-v $(CURDIR):/out \
+			-e ITERATION=$(ITERATION) \
+			-e DISTRIBUTION=$(DISTRIBUTION) \
+			-e LIBGRPC_RPM=$(LIBGRPC_RPM) \
+			-e LIBGRPC_DEVEL_RPM=$(LIBGRPC_DEVEL_RPM) \
+			-w /tmp \
+			libdfegrpc_build \
+			make -f /src/Makefile.grpcdocker
+
+$(LIBDFEGRPC_RPM) $(LIBDFEGRPC_DEVEL_RPM): Makefile.dfedocker \
+	$(LIBGRPC_RPM) \
+	$(LIBGRPC_DEVEL_RPM) \
+	.build/libdfegrpc_build \
+	libdfegrpc.cc libdfegrpc.h libdfegrpc_internal.h
+	docker run --rm -v $(CURDIR):/src:ro \
+			-v $(CURDIR):/out \
+			-e VERSION=$(VERSION) \
+			-e ITERATION=$(ITERATION) \
+			-e DISTRIBUTION=$(DISTRIBUTION) \
+			-e LIBGRPC_RPM=$(LIBGRPC_RPM) \
+			-e LIBGRPC_DEVEL_RPM=$(LIBGRPC_DEVEL_RPM) \
+			-e LIBDFEGRPC_RPM=$(LIBDFEGRPC_RPM) \
+			-e LIBDFEGRPC_DEVEL_RPM=$(LIBDFEGRPC_DEVEL_RPM) \
+			-w /tmp \
+			libdfegrpc_build \
+			make -f /src/Makefile.dfedocker
+
+.PHONY: docker-test
+docker-test: docker-build
+	docker run --rm -v $(CURDIR):/src:ro \
+			-e VERSION=$(VERSION) \
+			-e COFFEE_SHOP_KEY_PATH=$(COFFEE_SHOP_KEY_PATH) \
+			-e COFFEE_SHOP_PROJECT_ID=$(COFFEE_SHOP_PROJECT_ID) \
+			libdfegrpc_build \
+			make -C /src run-test
+
+.PHONY: run-test
+run-test:
+	rpm -ivh $(RPMS)
+	dfegrpc_test_client -a coffee_please.ul -k $(COFFEE_SHOP_KEY_PATH) -p $(COFFEE_SHOP_PROJECT_ID)
