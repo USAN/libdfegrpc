@@ -1,14 +1,16 @@
-GRPC_RELEASE ?= 1.12.1
+GRPC_RELEASE ?= 1.12.x
 PROTOBUF_RELEASE ?= 3.5.1
 
 .PHONY: all
-all: libgrpc-$(GRPC_RELEASE)-1.x86_64.rpm libgrpc-devel-$(GRPC_RELEASE)-1.x86_64.rpm
+all: $(LIBGRPC_RPM) $(LIBGRPC_DEVEL_RPM)
 	cp $^ /out
 
-libgrpc-$(GRPC_RELEASE)-1.x86_64.rpm: /usr/lib/libprotobuf.so /usr/lib/libgrpc++.so
-	fpm -s dir -t rpm -n libgrpc -v $(GRPC_RELEASE) \
+$(LIBGRPC_RPM): /usr/lib/libprotobuf.so /usr/lib/libgrpc++.so
+	fpm --input-type dir --output-type rpm --name libgrpc --version $(GRPC_RELEASE) \
 		--after-install /src/ldconfig.sh \
 		--after-upgrade /src/ldconfig.sh \
+		--rpm-dist $(DISTRIBUTION) \
+		--iteration $(ITERATION) \
 		/usr/lib/libproto* \
 		/usr/lib/libgrpc* \
 		/usr/bin/protoc \
@@ -16,9 +18,11 @@ libgrpc-$(GRPC_RELEASE)-1.x86_64.rpm: /usr/lib/libprotobuf.so /usr/lib/libgrpc++
 		/usr/bin/grpc_cpp_plugin \
 		/usr/lib/libgpr*
 
-libgrpc-devel-$(GRPC_RELEASE)-1.x86_64.rpm: /usr/lib/libprotobuf.so /usr/lib/libgrpc++.so
-	fpm -s dir -t rpm -n libgrpc-devel -v $(GRPC_RELEASE) \
-		-d 'libgrpc > 1' \
+$(LIBGRPC_DEVEL_RPM): /usr/lib/libprotobuf.so /usr/lib/libgrpc++.so
+	fpm --input-type dir --output-type rpm --name libgrpc-devel --version $(GRPC_RELEASE) \
+		--rpm-dist $(DISTRIBUTION) \
+		--iteration $(ITERATION) \
+		--depends 'libgrpc > 1' \
 		/usr/include/google/protobuf/* \
    		/usr/include/grpc*
 

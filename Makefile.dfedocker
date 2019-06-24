@@ -1,25 +1,29 @@
 VERSION ?= $(shell git describe --tags --dirty=M 2> /dev/null | sed -e 's/[^/]*\///g' -e 's/-/_/g')
-GRPC_RELEASE ?= 1.12.1
+GRPC_RELEASE ?= 1.12.x
 PROTOBUF_RELEASE ?= 3.5.1
 
 .PHONY: all
-all: libdfegrpc-$(VERSION)-1.x86_64.rpm libdfegrpc-devel-$(VERSION)-1.x86_64.rpm
+all: $(LIBDFEGRPC_RPM) $(LIBDFEGRPC_DEVEL_RPM)
 	cp $^ /out
 
-libdfegrpc-$(VERSION)-1.x86_64.rpm: /usr/lib/libdfegrpc.so 
-	fpm -s dir -t rpm -n libdfegrpc -v $(VERSION) \
+$(LIBDFEGRPC_RPM): /usr/lib/libdfegrpc.so 
+	fpm --input-type dir --output-type rpm --name libdfegrpc --version $(VERSION) \
 		--after-install /src/ldconfig.sh \
 		--after-upgrade /src/ldconfig.sh \
-		-d 'libgrpc > 1' \
+		--rpm-dist $(DISTRIBUTION) \
+		--iteration $(ITERATION) \
+		--depends 'libgrpc > 1' \
 		/usr/include/libdfegrpc.h \
 		/usr/lib/libdfegrpc.so \
 		test_client=/usr/bin/dfegrpc_test_client \
 		test_synth=/usr/bin/dfegrpc_test_synth
 
-libdfegrpc-devel-$(VERSION)-1.x86_64.rpm: /usr/lib/libdfegrpc.so
-	fpm -s dir -t rpm -n libdfegrpc-devel -v $(VERSION) \
-		-d 'libdfegrpc > 1' \
-		-d 'libgrpc-devel > 1' \
+$(LIBDFEGRPC_DEVEL_RPM): /usr/lib/libdfegrpc.so
+	fpm --input-type dir --output-type rpm --name libdfegrpc-devel --version $(VERSION) \
+		--rpm-dist $(DISTRIBUTION) \
+		--iteration $(ITERATION) \
+		--depends 'libdfegrpc > 1' \
+		--depends 'libgrpc-devel > 1' \
 		/usr/include/libdfegrpc.h 
 
 /usr/lib/libdfegrpc.so: /src/Makefile /usr/lib/libprotobuf.so
@@ -30,5 +34,5 @@ libdfegrpc-devel-$(VERSION)-1.x86_64.rpm: /usr/lib/libdfegrpc.so
 	make test
 
 /usr/lib/libprotobuf.so:
-	rpm -ivh /src/libgrpc-$(GRPC_RELEASE)-1.x86_64.rpm
-	rpm -ivh /src/libgrpc-devel-$(GRPC_RELEASE)-1.x86_64.rpm
+	rpm -ivh /src/$(LIBGRPC_RPM)
+	rpm -ivh /src/$(LIBGRPC_DEVEL_RPM)
