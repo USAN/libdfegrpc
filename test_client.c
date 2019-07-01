@@ -160,6 +160,7 @@ int main(int argc, char *argv[])
         df_set_session_id(session, "testclient");
         df_set_debug(session, 1);
         df_set_use_external_endpointer(session, !single_utterance);
+        df_set_stop_writes_on_final_transcription(session, 1);
         if (model) {
             df_set_model(session, model);
         }
@@ -193,11 +194,14 @@ int main(int argc, char *argv[])
 
             test_log(LOG_DEBUG, "Recognition started -- %d\n", df_get_rpc_state(session));
 
-            while (!feof(audio) && !ferror(audio)) {
+            while (!ferror(audio)) {
                 enum dialogflow_session_state state;
                 char buffer[160];
                 int newResponseCount;
-                size_t read = fread(buffer, sizeof(char), sizeof(buffer), audio);
+                size_t read = 0;
+                if (!feof(audio)) {
+                    read = fread(buffer, sizeof(char), sizeof(buffer), audio);
+                }
                 if (read < sizeof(buffer)) {
                     memset(buffer + read, 0x7f, sizeof(buffer) - read);
                 }
