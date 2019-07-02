@@ -18,47 +18,50 @@ all: $(RPMS)
 .build:
 	mkdir -p $@
 
-.build/libdfegrpc_build: Dockerfile.$(DISTRIBUTION) .build
-	docker build -f Dockerfile.$(DISTRIBUTION) --tag libdfegrpc_build:latest .
+.build/libdfegrpc_build.$(DISTRIBUTION): Dockerfile.$(DISTRIBUTION) .build
+	docker build -f Dockerfile.$(DISTRIBUTION) --tag libdfegrpc_build:latest.$(DISTRIBUTION) .
 	@touch "$@"
 
-$(LIBGRPC_RPM) $(LIBGRPC_DEVEL_RPM): Makefile.grpcdocker .build/libdfegrpc_build
-	docker run --rm -v $(CURDIR):/src:ro \
-			-v $(CURDIR):/out \
-			-e ITERATION=$(ITERATION) \
-			-e DISTRIBUTION=$(DISTRIBUTION) \
-			-e LIBGRPC_RPM=$(LIBGRPC_RPM) \
-			-e LIBGRPC_DEVEL_RPM=$(LIBGRPC_DEVEL_RPM) \
-			-w /tmp \
-			libdfegrpc_build \
-			make -f /src/Makefile.grpcdocker
+$(LIBGRPC_RPM) $(LIBGRPC_DEVEL_RPM): Makefile.grpcdocker .build/libdfegrpc_build.$(DISTRIBUTION)
+	docker run --rm \
+	       	--volume $(CURDIR):/src:ro \
+		--volume $(CURDIR):/out \
+		--env ITERATION=$(ITERATION) \
+		--env DISTRIBUTION=$(DISTRIBUTION) \
+		--env LIBGRPC_RPM=$(LIBGRPC_RPM) \
+		--env LIBGRPC_DEVEL_RPM=$(LIBGRPC_DEVEL_RPM) \
+		--workdir /tmp \
+		libdfegrpc_build:latest.$(DISTRIBUTION) \
+		make -f /src/Makefile.grpcdocker
 
 $(LIBDFEGRPC_RPM) $(LIBDFEGRPC_DEVEL_RPM): Makefile.dfedocker \
 	$(LIBGRPC_RPM) \
 	$(LIBGRPC_DEVEL_RPM) \
-	.build/libdfegrpc_build \
+	.build/libdfegrpc_build.$(DISTRIBUTION) \
 	libdfegrpc.cc libdfegrpc.h libdfegrpc_internal.h
-	docker run --rm -v $(CURDIR):/src:ro \
-			-v $(CURDIR):/out \
-			-e VERSION=$(VERSION) \
-			-e ITERATION=$(ITERATION) \
-			-e DISTRIBUTION=$(DISTRIBUTION) \
-			-e LIBGRPC_RPM=$(LIBGRPC_RPM) \
-			-e LIBGRPC_DEVEL_RPM=$(LIBGRPC_DEVEL_RPM) \
-			-e LIBDFEGRPC_RPM=$(LIBDFEGRPC_RPM) \
-			-e LIBDFEGRPC_DEVEL_RPM=$(LIBDFEGRPC_DEVEL_RPM) \
-			-w /tmp \
-			libdfegrpc_build \
-			make -f /src/Makefile.dfedocker
+	docker run --rm \
+		--volume $(CURDIR):/src:ro \
+		--volume $(CURDIR):/out \
+		--env VERSION=$(VERSION) \
+		--env ITERATION=$(ITERATION) \
+		--env DISTRIBUTION=$(DISTRIBUTION) \
+		--env LIBGRPC_RPM=$(LIBGRPC_RPM) \
+		--env LIBGRPC_DEVEL_RPM=$(LIBGRPC_DEVEL_RPM) \
+		--env LIBDFEGRPC_RPM=$(LIBDFEGRPC_RPM) \
+		--env LIBDFEGRPC_DEVEL_RPM=$(LIBDFEGRPC_DEVEL_RPM) \
+		--workdir /tmp \
+		libdfegrpc_build:latest.$(DISTRIBUTION) \
+		make -f /src/Makefile.dfedocker
 
 .PHONY: docker-test
 docker-test: docker-build
-	docker run --rm -v $(CURDIR):/src:ro \
-			-e VERSION=$(VERSION) \
-			-e COFFEE_SHOP_KEY_PATH=$(COFFEE_SHOP_KEY_PATH) \
-			-e COFFEE_SHOP_PROJECT_ID=$(COFFEE_SHOP_PROJECT_ID) \
-			libdfegrpc_build \
-			make -C /src run-test
+	docker run --rm \
+		--volume $(CURDIR):/src:ro \
+		--env VERSION=$(VERSION) \
+		--env COFFEE_SHOP_KEY_PATH=$(COFFEE_SHOP_KEY_PATH) \
+		--env COFFEE_SHOP_PROJECT_ID=$(COFFEE_SHOP_PROJECT_ID) \
+		libdfegrpc_build:latest.$(DISTRIBUTION) \
+		make -C /src run-test
 
 .PHONY: run-test
 run-test:
