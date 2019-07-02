@@ -80,6 +80,7 @@ extern LIBDFEGRPC_DLL_EXPORTED void df_set_debug(struct dialogflow_session *sess
 extern LIBDFEGRPC_DLL_EXPORTED struct timeval df_get_session_start_time(struct dialogflow_session *session);
 extern LIBDFEGRPC_DLL_EXPORTED struct timeval df_get_session_last_transcription_time(struct dialogflow_session *session);
 extern LIBDFEGRPC_DLL_EXPORTED struct timeval df_get_session_intent_detected_time(struct dialogflow_session *session);
+extern LIBDFEGRPC_DLL_EXPORTED void df_set_stop_writes_on_final_transcription(struct dialogflow_session *session, int stop_writes);
 
 extern LIBDFEGRPC_DLL_EXPORTED int google_synth_speech(const char *endpoint, const char *svc_key, const char *text, 
     const char *language, const char *voice_name, const char *destination_filename);

@@ -597,6 +597,17 @@ int df_recognize_event(struct dialogflow_session *session, const char *event, co
     return 0;
 }
 
+void maybe_stop_session_writes(struct dialogflow_session *session)
+{
+    std::unique_lock<std::mutex> lock(session->lock);
+    if (session->writes_done == false) {
+        session->writes_done = true;
+        session->current_request->WritesDone();
+        lock.unlock();
+        df_log_call(session->user_data, "end_write", 0, NULL);
+    }
+}
+
 static void df_read_exec(struct dialogflow_session *session)
 {
     StreamingDetectIntentResponse response;
@@ -650,7 +661,8 @@ static void df_read_exec(struct dialogflow_session *session)
                     sessionId.c_str());
                 df_log_call(user_data, "end_of_utterance", 0, NULL);
             } else {
-                df_log(LOG_DEBUG, "Got interim response '%s' for %s\n",
+                df_log(LOG_DEBUG, "Got %s transcription '%s' for %s\n",
+                    response.recognition_result().is_final() ? "final" : "interim",
                     response.recognition_result().transcript().c_str(),
                     sessionId.c_str());
                 if (response.output_audio().length() > 0) {
@@ -660,6 +672,7 @@ static void df_read_exec(struct dialogflow_session *session)
                     df_log(LOG_DEBUG, "Interim response has audio config\n");
                 }
                 if (response.recognition_result().is_final()) {
+                    bool stop_writes;
                     std::string score = std::to_string(response.recognition_result().confidence());
                     struct dialogflow_log_data log_data[] = { 
                         { "text", response.recognition_result().transcript().c_str() },
@@ -669,7 +682,11 @@ static void df_read_exec(struct dialogflow_session *session)
                     lock.lock();
                     session->last_transcription_time = tvnow();
                     session->transcription_response = std::make_shared<StreamingDetectIntentResponse>(response);
+                    stop_writes = session->stop_writes_on_final_transcription;
                     lock.unlock();
+                    if (stop_writes) {
+                        maybe_stop_session_writes(session);
+                    }
                 } else {
                     struct dialogflow_log_data log_data[] = { { "text", response.recognition_result().transcript().c_str() }};
                     df_log_call(user_data, "transcription", 1, log_data);
@@ -792,9 +809,8 @@ int df_stop_recognition(struct dialogflow_session *session)
     if (session->state != DF_STATE_READY) {
         lock.unlock();
         df_log_call(session->user_data, "stopping", 0, NULL);
+        maybe_stop_session_writes(session);
         lock.lock();
-
-        session->current_request->WritesDone();
 
         if (session->read_thread.joinable()) {
             lock.unlock();
@@ -839,6 +855,13 @@ enum dialogflow_session_state df_write_audio(struct dialogflow_session *session,
     enum dialogflow_session_state state;
 
     state = session->state;
+    if (session->writes_done) {
+        if (session->debug) {
+            lock.unlock();
+            df_log(LOG_DEBUG, "Not writing audio because writes are done.\n");
+        }
+        return state;
+    }
     lock.unlock();
 
     if (state != DF_STATE_STARTED) {
@@ -858,9 +881,9 @@ enum dialogflow_session_state df_write_audio(struct dialogflow_session *session,
 
     lock.lock();
     if (!session->current_request->Write(request)) {
-        df_log(LOG_WARNING, "Session %s got error writing audio data packet to %s\n", session->session_id.c_str(), session->project_id.c_str());
         state = session->state = DF_STATE_ERROR;
         lock.unlock();
+        df_log(LOG_WARNING, "Session %s got error writing audio data packet to %s\n", session->session_id.c_str(), session->project_id.c_str());
         df_log_call(session->user_data, "write_error", 0, NULL); 
     }
     if (session->debug) {
@@ -934,6 +957,11 @@ struct timeval df_get_session_intent_detected_time(struct dialogflow_session *se
     return session->intent_detected_time;
 }
 
+void df_set_stop_writes_on_final_transcription(struct dialogflow_session *session, int stop_writes)
+{
+    std::lock_guard<std::mutex> lock(session->lock);
+    session->stop_writes_on_final_transcription = (stop_writes != 0);
+}
 
 
 int google_synth_speech(const char *endpoint, const char *svc_key, const char *text, const char *language, const char *voice_name, const char *destination_filename)
