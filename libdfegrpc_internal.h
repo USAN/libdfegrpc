@@ -57,6 +57,8 @@ struct dialogflow_session {
     bool request_sentiment_analysis;
     bool use_external_endpointer;
     bool debug;
+    bool stop_writes_on_final_transcription;
+    bool writes_done;
     void *user_data;
     timeval session_start_time;
     timeval last_transcription_time;
