@@ -1,0 +1,32 @@
+FROM centos:7
+
+LABEL maintainer="daniel.collins@usan.com"
+
+RUN yum install -y centos-release-scl
+
+RUN yum install -y devtoolset-7
+
+RUN scl enable devtoolset-7 bash
+
+RUN yum install -y \
+    autoconf \
+    binutils \
+    gcc \
+    gcc-c++ \
+    gem \
+    git \
+    make \
+    libtool \
+    rpm-build \
+    rh-ruby23 \
+    rh-ruby23-ruby-devel \
+    wget
+
+# Enables ruby 2.3 and installs fpm
+ENV PATH /opt/rh/rh-ruby23/root/usr/bin:$PATH
+ENV LD_LIBRARY_PATH /opt/rh/rh-ruby23/root/usr/lib64:/opt/rh/rh-ruby23/root/usr/lib
+
+ENV GEM_HOME=/usr
+ENV GEM_PATH=/usr
+
+RUN gem install --no-ri --no-rdoc fpm

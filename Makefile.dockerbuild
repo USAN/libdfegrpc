@@ -1,0 +1,67 @@
+VERSION ?= $(shell git describe --tags --dirty=M 2> /dev/null | sed -e 's/[^/]*\///g' -e 's/-/_/g')
+GRPC_VERSION ?= 1.12.x
+
+ARCH = $(shell uname -m)
+ITERATION = 1
+DISTRIBUTION ?= el6
+
+LIBGRPC_RPM = libgrpc-$(GRPC_VERSION)-$(ITERATION).$(DISTRIBUTION).$(ARCH).rpm
+LIBGRPC_DEVEL_RPM = libgrpc-devel-$(GRPC_VERSION)-$(ITERATION).$(DISTRIBUTION).$(ARCH).rpm
+LIBDFEGRPC_RPM = libdfegrpc-$(VERSION)-$(ITERATION).$(DISTRIBUTION).$(ARCH).rpm
+LIBDFEGRPC_DEVEL_RPM = libdfegrpc-devel-$(VERSION)-$(ITERATION).$(DISTRIBUTION).$(ARCH).rpm
+
+RPMS = $(LIBGRPC_RPM) $(LIBGRPC_DEVEL_RPM) $(LIBDFEGRPC_RPM) $(LIBDFEGRPC_DEVEL_RPM)
+
+.PHONY: all
+all: $(RPMS)
+	
+.build:
+	mkdir -p $@
+
+.build/libdfegrpc_build.$(DISTRIBUTION): Dockerfile.$(DISTRIBUTION) .build
+	docker build --file Dockerfile.$(DISTRIBUTION) --tag libdfegrpc_build:latest.$(DISTRIBUTION) .
+	@touch "$@"
+
+$(LIBGRPC_RPM) $(LIBGRPC_DEVEL_RPM): Makefile.grpcdocker .build/libdfegrpc_build.$(DISTRIBUTION)
+	docker run --rm \
+		--volume $(CURDIR):/src:ro \
+		--volume $(CURDIR):/out \
+		--env ITERATION=$(ITERATION) \
+		--env DISTRIBUTION=$(DISTRIBUTION) \
+		--env LIBGRPC_RPM=$(LIBGRPC_RPM) \
+		--env LIBGRPC_DEVEL_RPM=$(LIBGRPC_DEVEL_RPM) \
+		--workdir /tmp \
+		libdfegrpc_build:latest.$(DISTRIBUTION) \
+		make -f /src/Makefile.grpcdocker
+
+$(LIBDFEGRPC_RPM) $(LIBDFEGRPC_DEVEL_RPM): Makefile.dfedocker .build/libdfegrpc_build.$(DISTRIBUTION) \
+	libdfegrpc.cc libdfegrpc.h libdfegrpc_internal.h \
+	$(LIBGRPC_RPM) $(LIBGRPC_DEVEL_RPM)
+	docker run --rm \
+		--volume $(CURDIR):/src:ro \
+		--volume $(CURDIR):/out \
+		--env VERSION=$(VERSION) \
+		--env ITERATION=$(ITERATION) \
+		--env DISTRIBUTION=$(DISTRIBUTION) \
+		--env LIBGRPC_RPM=$(LIBGRPC_RPM) \
+		--env LIBGRPC_DEVEL_RPM=$(LIBGRPC_DEVEL_RPM) \
+		--env LIBDFEGRPC_RPM=$(LIBDFEGRPC_RPM) \
+		--env LIBDFEGRPC_DEVEL_RPM=$(LIBDFEGRPC_DEVEL_RPM) \
+		--workdir /tmp \
+		libdfegrpc_build:latest.$(DISTRIBUTION) \
+		make -f /src/Makefile.dfedocker
+
+.PHONY: docker-test
+docker-test: all
+	docker run --rm \
+		--volume $(CURDIR):/src:ro \
+		--env VERSION=$(VERSION) \
+		--env COFFEE_SHOP_KEY_PATH=$(COFFEE_SHOP_KEY_PATH) \
+		--env COFFEE_SHOP_PROJECT_ID=$(COFFEE_SHOP_PROJECT_ID) \
+		libdfegrpc_build:latest.$(DISTRIBUTION) \
+		make -C /src run-test
+
+.PHONY: run-test
+run-test:
+	rpm -ivh $(RPMS)
+	dfegrpc_test_client -a coffee_please.ul -k $(COFFEE_SHOP_KEY_PATH) -p $(COFFEE_SHOP_PROJECT_ID)
