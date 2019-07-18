@@ -844,6 +844,7 @@ int df_stop_recognition(struct dialogflow_session *session)
         lock.unlock();
         df_log_call(session->user_data, "stop", 0, NULL);
         lock.lock();
+        session->writes_done = false;
         session->state = DF_STATE_READY;
     }
     return 0;
