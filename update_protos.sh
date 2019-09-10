@@ -13,12 +13,13 @@ APIS_FILE=`basename ${GOOGLE_APIS_URL}`
 
 wget "${GOOGLE_APIS_URL}" -O ${TEMPDIR}/${APIS_FILE}
 
-FILES=`unzip -l ${TEMPDIR}/${APIS_FILE} | awk -F' ' '{ print $4; }' | grep -E '(google/api|google/type|google/longrunning|google/rpc|google/logging|google/cloud/texttospeech)' | tr '\n' ' '`
+FILES=`unzip -l ${TEMPDIR}/${APIS_FILE} | awk -F' ' '{ print $4; }' | grep -E '(google/api|google/type|google/longrunning|google/rpc|google/logging|google/cloud/texttospeech|google/cloud/dialogflow)' | tr '\n' ' '`
 
 unzip ${TEMPDIR}/${APIS_FILE} -d ${TEMPDIR} ${FILES} 
 
-rm -Rf protos/google/{api, type, longrunning, rpc, logging, cloud/texttospeech}
+rm -Rf protos/google/{api, type, longrunning, rpc, logging, cloud/texttospeech, cloud/dialogflow}
 
+mkdir -p protos
 tar -C ${TEMPDIR}/googleapis-master -f - -c . | tar -x -v -f - -C protos
 
 rm -Rf ${TEMPDIR}

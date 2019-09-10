@@ -315,7 +315,6 @@ static void make_query_result_responses(struct dialogflow_session *session, cons
     int play_audio_count = 0;
     int synthesize_speech_count = 0;
     int transfer_call_count = 0;
-    int terminate_call_count = 0;
 
     session->results.push_back(std::unique_ptr<df_result>(new df_result("query_text", query_result.query_text(), score)));
     session->results.push_back(std::unique_ptr<df_result>(new df_result("language_code", query_result.language_code(), score)));
@@ -353,9 +352,6 @@ static void make_query_result_responses(struct dialogflow_session *session, cons
         } else if (msg.has_telephony_transfer_call()) {
             session->results.push_back(std::unique_ptr<df_result>(new df_result(make_indexed_name("transfer_call", transfer_call_count++),
                 msg.telephony_transfer_call().phone_number(), score)));
-        } else if (msg.has_telephony_terminate_call()) {
-            session->results.push_back(std::unique_ptr<df_result>(new df_result(make_indexed_name("terminate_call", terminate_call_count++),
-                "true", score)));
         }
     }
 
@@ -455,6 +451,8 @@ static void make_streaming_responses(struct dialogflow_session *session)
             float speech_score = session->transcription_response->recognition_result().confidence();
             session->results.push_back(std::unique_ptr<df_result>(new df_result("speech_score", std::to_string(speech_score), score)));
         }
+        session->results.push_back(std::unique_ptr<df_result>(new df_result("alternate_result_count", std::to_string(session->final_response->alternative_query_results_size()), score)));
+
         lock.unlock();
         log_responses(session, score);
     }
@@ -469,6 +467,7 @@ static void make_synchronous_responses(struct dialogflow_session *session, Detec
     
     make_audio_result<DetectIntentResponse>(session, response, score);
     make_query_result_responses(session, response.query_result(), score);
+    session->results.push_back(std::unique_ptr<df_result>(new df_result("alternate_result_count", std::to_string(response.alternative_query_results_size()), score)));
     lock.unlock();
     log_responses(session, score);
 }
@@ -661,6 +660,9 @@ static void df_read_exec(struct dialogflow_session *session)
                     sessionId.c_str());
                 df_log_call(user_data, "end_of_utterance", 0, NULL);
             } else {
+                double offset_as_double = (double) response.recognition_result().speech_end_offset().seconds() + 
+                    ((double) response.recognition_result().speech_end_offset().nanos() / 1000000000);
+                std::string offset = format("%f", (float) offset_as_double);
                 df_log(LOG_DEBUG, "Got %s transcription '%s' for %s\n",
                     response.recognition_result().is_final() ? "final" : "interim",
                     response.recognition_result().transcript().c_str(),
@@ -676,9 +678,10 @@ static void df_read_exec(struct dialogflow_session *session)
                     std::string score = std::to_string(response.recognition_result().confidence());
                     struct dialogflow_log_data log_data[] = { 
                         { "text", response.recognition_result().transcript().c_str() },
-                        { "score", score.c_str() }
+                        { "score", score.c_str() },
+                        { "offset", offset.c_str() }
                     };
-                    df_log_call(user_data, "final_transcription", 2, log_data);
+                    df_log_call(user_data, "final_transcription", ARRAY_LEN(log_data), log_data);
                     lock.lock();
                     session->last_transcription_time = tvnow();
                     session->transcription_response = std::make_shared<StreamingDetectIntentResponse>(response);
@@ -688,8 +691,13 @@ static void df_read_exec(struct dialogflow_session *session)
                         maybe_stop_session_writes(session);
                     }
                 } else {
-                    struct dialogflow_log_data log_data[] = { { "text", response.recognition_result().transcript().c_str() }};
-                    df_log_call(user_data, "transcription", 1, log_data);
+                    std::string stability = std::to_string(response.recognition_result().stability());
+                    struct dialogflow_log_data log_data[] = { 
+                        { "text", response.recognition_result().transcript().c_str() },
+                        { "stability", stability.c_str() },
+                        { "offset", offset.c_str() }
+                    };
+                    df_log_call(user_data, "transcription", ARRAY_LEN(log_data), log_data);
                     lock.lock();
                     session->last_transcription_time = tvnow();
                     lock.unlock();
@@ -777,7 +785,6 @@ int df_start_recognition(struct dialogflow_session *session, const char *languag
     }
     if (session->request_sentiment_analysis) {
         request.mutable_query_params()->mutable_sentiment_analysis_request_config()->set_analyze_query_text_sentiment(1);
-        request.mutable_query_params()->mutable_sentiment_analysis_request_config()->set_analyze_conversation_text_sentiment(1);
     }
 
     if (!session->current_request->Write(request)) {
