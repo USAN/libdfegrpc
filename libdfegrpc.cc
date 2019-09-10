@@ -773,7 +773,6 @@ int df_start_recognition(struct dialogflow_session *session, const char *languag
     }
     if (session->request_sentiment_analysis) {
         request.mutable_query_params()->mutable_sentiment_analysis_request_config()->set_analyze_query_text_sentiment(1);
-        request.mutable_query_params()->mutable_sentiment_analysis_request_config()->set_analyze_conversation_text_sentiment(1);
     }
 
     if (!session->current_request->Write(request)) {
