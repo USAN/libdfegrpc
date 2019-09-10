@@ -6,8 +6,7 @@ The main Google API protos come from the
 [github googleapis](https://github.com/googleapis/googleapis) repository. You should run `proto_update.sh` to re-download these 
 and refresh them.
 
-The dialogflow API protos come from the private alpha (at this time, at least). You should extract them from a sample application 
-(node.js is typically the best) and drop them here manually.
+As the dialogflow API protos are now GA they are updated / installed using the same script.
 
 # Building the library
 
