@@ -353,9 +353,6 @@ static void make_query_result_responses(struct dialogflow_session *session, cons
         } else if (msg.has_telephony_transfer_call()) {
             session->results.push_back(std::unique_ptr<df_result>(new df_result(make_indexed_name("transfer_call", transfer_call_count++),
                 msg.telephony_transfer_call().phone_number(), score)));
-        } else if (msg.has_telephony_terminate_call()) {
-            session->results.push_back(std::unique_ptr<df_result>(new df_result(make_indexed_name("terminate_call", terminate_call_count++),
-                "true", score)));
         }
     }
 
