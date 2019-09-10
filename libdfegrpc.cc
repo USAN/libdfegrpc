@@ -315,7 +315,6 @@ static void make_query_result_responses(struct dialogflow_session *session, cons
     int play_audio_count = 0;
     int synthesize_speech_count = 0;
     int transfer_call_count = 0;
-    int terminate_call_count = 0;
 
     session->results.push_back(std::unique_ptr<df_result>(new df_result("query_text", query_result.query_text(), score)));
     session->results.push_back(std::unique_ptr<df_result>(new df_result("language_code", query_result.language_code(), score)));
