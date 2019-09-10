@@ -451,6 +451,8 @@ static void make_streaming_responses(struct dialogflow_session *session)
             float speech_score = session->transcription_response->recognition_result().confidence();
             session->results.push_back(std::unique_ptr<df_result>(new df_result("speech_score", std::to_string(speech_score), score)));
         }
+        session->results.push_back(std::unique_ptr<df_result>(new df_result("alternate_result_count", std::to_string(session->final_response->alternative_query_results_size()), score)));
+
         lock.unlock();
         log_responses(session, score);
     }
@@ -465,6 +467,7 @@ static void make_synchronous_responses(struct dialogflow_session *session, Detec
     
     make_audio_result<DetectIntentResponse>(session, response, score);
     make_query_result_responses(session, response.query_result(), score);
+    session->results.push_back(std::unique_ptr<df_result>(new df_result("alternate_result_count", std::to_string(response.alternative_query_results_size()), score)));
     lock.unlock();
     log_responses(session, score);
 }
