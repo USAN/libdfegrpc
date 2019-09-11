@@ -39,8 +39,8 @@ $(LIBGRPC_DEVEL_RPM): /usr/lib/libprotobuf.so /usr/lib/libgrpc++.so
 	prefix=/usr PKG_CONFIG_PATH=/usr/lib/pkgconfig:$(PKG_CONFIG_PATH) LD_LIBRARY_PATH=/usr/lib make -C grpc install
 
 grpc/Makefile:
-	git clone -b v$(GRPC_RELEASE) https://github.com/grpc/grpc
-	cd grpc && git submodule update --init
+	git clone https://github.com/grpc/grpc
+	cd grpc && git checkout v$(GRPC_RELEASE) && git submodule update --init
 
 protobuf-cpp-$(PROTOBUF_RELEASE).tar.gz:
 	wget https://github.com/google/protobuf/releases/download/v$(PROTOBUF_RELEASE)/protobuf-cpp-$(PROTOBUF_RELEASE).tar.gz
