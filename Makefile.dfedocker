@@ -1,6 +1,6 @@
 VERSION ?= $(shell git describe --tags --dirty=M 2> /dev/null | sed -e 's/[^/]*\///g' -e 's/-/_/g')
-GRPC_RELEASE ?= 1.12.x
-PROTOBUF_RELEASE ?= 3.5.1
+#GRPC_RELEASE ?= 1.23.0
+#PROTOBUF_RELEASE ?= 3.9.1
 
 .PHONY: all
 all: $(LIBDFEGRPC_RPM) $(LIBDFEGRPC_DEVEL_RPM)

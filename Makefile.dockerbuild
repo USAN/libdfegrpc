@@ -1,12 +1,13 @@
 VERSION ?= $(shell git describe --tags --dirty=M 2> /dev/null | sed -e 's/[^/]*\///g' -e 's/-/_/g')
-GRPC_VERSION ?= 1.12.x
+GRPC_RELEASE ?= 1.23.0
+PROTOBUF_RELEASE ?= 3.9.1
 
 ARCH = $(shell uname -m)
 ITERATION = 1
 DISTRIBUTION ?= el6
 
-LIBGRPC_RPM = libgrpc-$(GRPC_VERSION)-$(ITERATION).$(DISTRIBUTION).$(ARCH).rpm
-LIBGRPC_DEVEL_RPM = libgrpc-devel-$(GRPC_VERSION)-$(ITERATION).$(DISTRIBUTION).$(ARCH).rpm
+LIBGRPC_RPM = libgrpc-$(GRPC_RELEASE)-$(ITERATION).$(DISTRIBUTION).$(ARCH).rpm
+LIBGRPC_DEVEL_RPM = libgrpc-devel-$(GRPC_RELEASE)-$(ITERATION).$(DISTRIBUTION).$(ARCH).rpm
 LIBDFEGRPC_RPM = libdfegrpc-$(VERSION)-$(ITERATION).$(DISTRIBUTION).$(ARCH).rpm
 LIBDFEGRPC_DEVEL_RPM = libdfegrpc-devel-$(VERSION)-$(ITERATION).$(DISTRIBUTION).$(ARCH).rpm
 
@@ -30,6 +31,8 @@ $(LIBGRPC_RPM) $(LIBGRPC_DEVEL_RPM): Makefile.grpcdocker .build/libdfegrpc_build
 		--env DISTRIBUTION=$(DISTRIBUTION) \
 		--env LIBGRPC_RPM=$(LIBGRPC_RPM) \
 		--env LIBGRPC_DEVEL_RPM=$(LIBGRPC_DEVEL_RPM) \
+		--env GRPC_RELEASE=$(GRPC_RELEASE) \
+		--env PROTOBUF_RELEASE=$(PROTOBUF_RELEASE) \
 		--workdir /tmp \
 		libdfegrpc_build:latest.$(DISTRIBUTION) \
 		make -f /src/Makefile.grpcdocker
@@ -47,6 +50,8 @@ $(LIBDFEGRPC_RPM) $(LIBDFEGRPC_DEVEL_RPM): Makefile.dfedocker .build/libdfegrpc_
 		--env LIBGRPC_DEVEL_RPM=$(LIBGRPC_DEVEL_RPM) \
 		--env LIBDFEGRPC_RPM=$(LIBDFEGRPC_RPM) \
 		--env LIBDFEGRPC_DEVEL_RPM=$(LIBDFEGRPC_DEVEL_RPM) \
+		--env GRPC_RELEASE=$(GRPC_RELEASE) \
+		--env PROTOBUF_RELEASE=$(PROTOBUF_RELEASE) \
 		--workdir /tmp \
 		libdfegrpc_build:latest.$(DISTRIBUTION) \
 		make -f /src/Makefile.dfedocker
