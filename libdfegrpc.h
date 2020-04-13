@@ -35,7 +35,8 @@ struct dialogflow_result {
     int score;
 };
 
-typedef void (*DF_LOG_FUNC)(enum dialogflow_log_level level, const char *file, int line, const char *function, const char *fmt, va_list args);
+typedef void (*DF_LOG_FUNC)(enum dialogflow_log_level level, const char *file, int line, const char *function, const char *fmt, va_list args)
+	__attribute__((format(printf, 5, 0)));
 
 extern LIBDFEGRPC_DLL_EXPORTED int df_init(DF_LOG_FUNC log_function);
 extern LIBDFEGRPC_DLL_EXPORTED struct dialogflow_session *df_create_session(const char *endpoint, const char *auth_key);
