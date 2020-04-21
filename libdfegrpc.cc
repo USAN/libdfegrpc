@@ -181,6 +181,22 @@ static std::string format(const std::string& format, ...)
     return &vec[0];
 }
 
+static void struct_to_results(struct dialogflow_session *session, const std::string& key, const ::google::protobuf::Struct& response, int score)
+{   
+    const ::google::protobuf::Map<std::string, ::google::protobuf::Value>& fields = response.fields();
+    for (::google::protobuf::Map<std::string, ::google::protobuf::Value>::const_iterator iterator = fields.begin(); iterator != fields.end(); ++iterator) {
+        const ::google::protobuf::Map<std::string, ::google::protobuf::Value>::value_type value = *iterator;
+        std::string subkey = key + "_" + value.first;
+        ::google::protobuf::Value::KindCase kind = value.second.kind_case();
+        if (kind == ::google::protobuf::Value::KindCase::kStructValue) {
+            const ::google::protobuf::Struct& substruct = value.second.struct_value();
+            struct_to_results(session, subkey, substruct, score);
+        } else if (kind == ::google::protobuf::Value::KindCase::kStringValue) {
+            session->results.push_back(std::unique_ptr<df_result>(new df_result(subkey, value.second.string_value(), score)));
+        }
+    }
+}
+
 static void make_query_result_responses(struct dialogflow_session *session, const QueryResult &query_result, int score)
 {
     session->results.push_back(std::unique_ptr<df_result>(new df_result("query_text", query_result.query_text(), score)));
@@ -232,6 +248,11 @@ static void make_query_result_responses(struct dialogflow_session *session, cons
         if (end.bool_value()) {
             session->results.push_back(std::unique_ptr<df_result>(new df_result("end_conversation", "1", score)));
         }
+    }
+
+    if (query_result.has_webhook_payload()) {
+        const ::google::protobuf::Struct& webhook_payload = query_result.webhook_payload();
+        struct_to_results(session, "webhook", webhook_payload, score);
     }
 }
 
