@@ -181,20 +181,39 @@ static std::string format(const std::string& format, ...)
     return &vec[0];
 }
 
+static void value_to_results(struct dialogflow_session *session, const std::string& key, const ::google::protobuf::Value& value, int score);
+
 static void struct_to_results(struct dialogflow_session *session, const std::string& key, const ::google::protobuf::Struct& response, int score)
 {   
     const ::google::protobuf::Map<std::string, ::google::protobuf::Value>& fields = response.fields();
     for (::google::protobuf::Map<std::string, ::google::protobuf::Value>::const_iterator iterator = fields.begin(); iterator != fields.end(); ++iterator) {
         const ::google::protobuf::Map<std::string, ::google::protobuf::Value>::value_type value = *iterator;
         std::string subkey = key + "_" + value.first;
-        ::google::protobuf::Value::KindCase kind = value.second.kind_case();
-        if (kind == ::google::protobuf::Value::KindCase::kStructValue) {
-            const ::google::protobuf::Struct& substruct = value.second.struct_value();
-            struct_to_results(session, subkey, substruct, score);
-        } else if (kind == ::google::protobuf::Value::KindCase::kStringValue) {
-            session->results.push_back(std::unique_ptr<df_result>(new df_result(subkey, value.second.string_value(), score)));
-        }
+        value_to_results(session, subkey, value.second, score);
     }
+}
+
+static void list_to_results(struct dialogflow_session *session, const std::string& key, const ::google::protobuf::ListValue& list, int score)
+{
+    for (int i = 0; i < list.values_size(); i++) {
+        const ::google::protobuf::Value& value = list.values(i);
+        std::string subkey = key + "_" + std::to_string(i);
+        value_to_results(session, subkey, value, score);
+    }
+}
+
+static void value_to_results(struct dialogflow_session *session, const std::string& key, const ::google::protobuf::Value& value, int score)
+{
+    ::google::protobuf::Value::KindCase kind = value.kind_case();
+    if (kind == ::google::protobuf::Value::KindCase::kStructValue) {
+        const ::google::protobuf::Struct& substruct = value.struct_value();
+        struct_to_results(session, key, substruct, score);
+    } else if (kind == ::google::protobuf::Value::KindCase::kListValue) {
+        const ::google::protobuf::ListValue& sublist = value.list_value();
+        list_to_results(session, key, sublist, score);
+    } else if (kind == ::google::protobuf::Value::KindCase::kStringValue) {
+        session->results.push_back(std::unique_ptr<df_result>(new df_result(key, value.string_value(), score)));
+    } 
 }
 
 static void make_query_result_responses(struct dialogflow_session *session, const QueryResult &query_result, int score)
