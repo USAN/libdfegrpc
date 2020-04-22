@@ -1,4 +1,4 @@
-// Copyright 2020 Google LLC
+// Copyright 2019 Google LLC.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -11,16 +11,13 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+//
 
 syntax = "proto3";
 
 package google.cloud.dialogflow.v2beta1;
 
 import "google/api/annotations.proto";
-import "google/api/field_behavior.proto";
-import "google/api/resource.proto";
-import "google/cloud/dialogflow/v2beta1/environment.proto";
-import "google/cloud/dialogflow/v2beta1/validation_result.proto";
 import "google/longrunning/operations.proto";
 import "google/protobuf/empty.proto";
 import "google/protobuf/field_mask.proto";
@@ -179,24 +176,10 @@ service Agents {
       }
     };
   }
-
-  // Gets agent validation result. Agent validation is performed during
-  // training time and is updated automatically when training is completed.
-  rpc GetValidationResult(GetValidationResultRequest) returns (ValidationResult) {
-    option (google.api.http) = {
-      get: "/v2beta1/{parent=projects/*}/agent/validationResult"
-    };
-  }
 }
 
 // Represents a conversational agent.
 message Agent {
-  option (google.api.resource) = {
-    type: "dialogflow.googleapis.com/Agent"
-    pattern: "projects/{project}/agent"
-    pattern: "projects/{project}/locations/{location}/agent"
-  };
-
   // Match mode determines how intents are detected from user queries.
   enum MatchMode {
     // Not specified.
@@ -207,7 +190,7 @@ message Agent {
     MATCH_MODE_HYBRID = 1;
 
     // Can be used for agents with a large number of examples in intents,
-    // especially the ones using @sys.any or very large custom entities.
+    // especially the ones using @sys.any or very large developer entities.
     MATCH_MODE_ML_ONLY = 2;
   }
 
@@ -323,18 +306,6 @@ message DeleteAgentRequest {
   string parent = 1;
 }
 
-// Contains basic configuration for a sub-agent.
-message SubAgent {
-  // Required. The project of this agent.
-  // Format: `projects/<Project ID>`.
-  string project = 1;
-
-  // Optional. The unique identifier (`environment name` in dialogflow console)
-  // of this sub-agent environment. Assumes draft environment if `environment`
-  // is not set.
-  string environment = 2;
-}
-
 // The request message for [Agents.SearchAgents][google.cloud.dialogflow.v2beta1.Agents.SearchAgents].
 message SearchAgentsRequest {
   // Required. The project to list agents from.
@@ -383,13 +354,26 @@ message ExportAgentRequest {
 
 // The response message for [Agents.ExportAgent][google.cloud.dialogflow.v2beta1.Agents.ExportAgent].
 message ExportAgentResponse {
-  // The exported agent.
+  // Required. The exported agent.
   oneof agent {
     // The URI to a file containing the exported agent. This field is populated
     // only if `agent_uri` is specified in `ExportAgentRequest`.
     string agent_uri = 1;
 
-    // Zip compressed raw byte content for agent.
+    // The exported agent.
+    //
+    // Example for how to export an agent to a zip file via a command line:
+    // <pre>curl \
+    //   'https://dialogflow.googleapis.com/v2beta1/projects/&lt;project_name&gt;/agent:export'\
+    //   -X POST \
+    //   -H 'Authorization: Bearer '$(gcloud auth application-default
+    //   print-access-token) \
+    //   -H 'Accept: application/json' \
+    //   -H 'Content-Type: application/json' \
+    //   --compressed \
+    //   --data-binary '{}' \
+    // | grep agentContent | sed -e 's/.*"agentContent": "\([^"]*\)".*/\1/' \
+    // | base64 --decode > &lt;agent zip file&gt;</pre>
     bytes agent_content = 2;
   }
 }
@@ -406,7 +390,20 @@ message ImportAgentRequest {
     // Note: The URI must start with "gs://".
     string agent_uri = 2;
 
-    // Zip compressed raw byte content for agent.
+    // The agent to import.
+    //
+    // Example for how to import an agent via the command line:
+    // <pre>curl \
+    //   'https://dialogflow.googleapis.com/v2beta1/projects/&lt;project_name&gt;/agent:import\
+    //    -X POST \
+    //    -H 'Authorization: Bearer '$(gcloud auth application-default
+    //    print-access-token) \
+    //    -H 'Accept: application/json' \
+    //    -H 'Content-Type: application/json' \
+    //    --compressed \
+    //    --data-binary "{
+    //       'agentContent': '$(cat &lt;agent zip file&gt; | base64 -w 0)'
+    //    }"</pre>
     bytes agent_content = 3;
   }
 }
@@ -423,21 +420,20 @@ message RestoreAgentRequest {
     // Note: The URI must start with "gs://".
     string agent_uri = 2;
 
-    // Zip compressed raw byte content for agent.
+    // The agent to restore.
+    //
+    // Example for how to restore an agent via the command line:
+    // <pre>curl \
+    //   'https://dialogflow.googleapis.com/v2beta1/projects/&lt;project_name&gt;/agent:restore\
+    //    -X POST \
+    //    -H 'Authorization: Bearer '$(gcloud auth application-default
+    //    print-access-token) \
+    //    -H 'Accept: application/json' \
+    //    -H 'Content-Type: application/json' \
+    //    --compressed \
+    //    --data-binary "{
+    //        'agentContent': '$(cat &lt;agent zip file&gt; | base64 -w 0)'
+    //    }"</pre>
     bytes agent_content = 3;
   }
-}
-
-// The request message for [Agents.GetValidationResult][google.cloud.dialogflow.v2beta1.Agents.GetValidationResult].
-message GetValidationResultRequest {
-  // Required. The project that the agent is associated with.
-  // Format: `projects/<Project ID>`.
-  string parent = 1 [(google.api.field_behavior) = REQUIRED];
-
-  // Optional. The language for which you want a validation result. If not
-  // specified, the agent's default language is used. [Many
-  // languages](https://cloud.google.com/dialogflow/docs/reference/language)
-  // are supported. Note: languages must be enabled in the agent before they can
-  // be used.
-  string language_code = 3 [(google.api.field_behavior) = OPTIONAL];
 }

@@ -1,4 +1,4 @@
-// Copyright 2020 Google LLC
+// Copyright 2019 Google LLC.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -11,6 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+//
 
 syntax = "proto3";
 
@@ -173,36 +174,18 @@ message Context {
   //
   // If `Environment ID` is not specified, we assume default 'draft'
   // environment. If `User ID` is not specified, we assume default '-' user.
-  //
-  // The following context names are reserved for internal use by Dialogflow.
-  // You should not use these contexts or create contexts with these names:
-  //
-  // * `__system_counters__`
-  // * `*_id_dialog_context`
-  // * `*_dialog_params_size`
   string name = 1;
 
   // Optional. The number of conversational query requests after which the
-  // context expires. The default is `0`. If set to `0`, the context expires
+  // context expires. If set to `0` (the default) the context expires
   // immediately. Contexts expire automatically after 20 minutes if there
   // are no matching queries.
   int32 lifespan_count = 2;
 
   // Optional. The collection of parameters associated with this context.
-  //
-  // Depending on your protocol or client library language, this is a
-  // map, associative array, symbol table, dictionary, or JSON object
-  // composed of a collection of (MapKey, MapValue) pairs:
-  //
-  // -   MapKey type: string
-  // -   MapKey value: parameter name
-  // -   MapValue type:
-  //     -   If parameter's entity type is a composite entity: map
-  //     -   Else: string or number, depending on parameter value type
-  // -   MapValue value:
-  //     -   If parameter's entity type is a composite entity:
-  //         map from composite entity property names to property values
-  //     -   Else: parameter value
+  // Refer to [this
+  // doc](https://cloud.google.com/dialogflow/docs/intents-actions-parameters)
+  // for syntax.
   google.protobuf.Struct parameters = 3;
 }
 

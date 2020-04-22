@@ -1,5 +1,3 @@
-load("@rules_proto//proto:defs.bzl", "proto_library")
-
 # This is an API workspace, having public visibility by default makes perfect sense.
 package(default_visibility = ["//visibility:public"])
 
@@ -13,7 +11,6 @@ proto_library(
     srcs = ["operations.proto"],
     deps = [
         "//google/api:annotations_proto",
-        "//google/api:client_proto",
         "//google/rpc:status_proto",
         "@com_google_protobuf//:any_proto",
         "@com_google_protobuf//:descriptor_proto",
@@ -30,7 +27,7 @@ proto_library_with_info(
 ##############################################################################
 # Java
 ##############################################################################
-load("@com_google_googleapis_imports//:imports.bzl", "java_grpc_library", "java_proto_library")
+load("@com_google_googleapis_imports//:imports.bzl", "java_proto_library", "java_grpc_library")
 
 java_proto_library(
     name = "longrunning_java_proto",
@@ -48,10 +45,10 @@ java_grpc_library(
 ##############################################################################
 load(
     "@com_google_googleapis_imports//:imports.bzl",
-    "go_gapic_assembly_pkg",
-    "go_gapic_library",
     "go_proto_library",
     "go_test",
+    "go_gapic_library",
+    "go_gapic_assembly_pkg",
 )
 
 go_proto_library(
@@ -68,9 +65,9 @@ go_proto_library(
 
 go_gapic_library(
     name = "longrunning_go_gapic",
-    srcs = [":longrunning_proto_with_info"],
-    grpc_service_config = "longrunning_grpc_service_config.json",
-    importpath = "cloud.google.com/go/longrunning/autogen;longrunning",
+    src = ":longrunning_proto_with_info",
+    gapic_yaml = "longrunning_gapic.yaml",
+    importpath = "cloud.google.com/go/longrunning/autogen",
     service_yaml = "//google/longrunning:longrunning.yaml",
     deps = [":longrunning_go_proto"],
 )
@@ -82,11 +79,12 @@ go_test(
     importpath = "cloud.google.com/go/longrunning/autogen",
 )
 
-# Open Source Packages
+# Opensource Packages
 go_gapic_assembly_pkg(
     name = "gapi-cloud-longrunning-go",
     deps = [
         ":longrunning_go_gapic",
+        ":longrunning_go_gapic_srcjar-smoke-test.srcjar",
         ":longrunning_go_gapic_srcjar-test.srcjar",
         ":longrunning_go_proto",
     ],
@@ -109,6 +107,6 @@ cc_proto_library(
 cc_grpc_library(
     name = "longrunning_cc_grpc",
     srcs = [":operations_proto"],
-    grpc_only = True,
     deps = [":longrunning_cc_proto"],
+    grpc_only = True,
 )

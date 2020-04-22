@@ -1,4 +1,4 @@
-// Copyright 2020 Google LLC
+// Copyright 2019 Google LLC.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -11,6 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+//
 
 syntax = "proto3";
 
@@ -167,8 +168,8 @@ service SessionEntityTypes {
 
 // Represents a session entity type.
 //
-// Extends or replaces a custom entity type at the user session level (we
-// refer to the entity types defined at the agent level as "custom entity
+// Extends or replaces a developer entity type at the user session level (we
+// refer to the entity types defined at the agent level as "developer entity
 // types").
 //
 // Note: session entity types apply to all queries, regardless of the language.
@@ -179,17 +180,17 @@ message SessionEntityType {
     ENTITY_OVERRIDE_MODE_UNSPECIFIED = 0;
 
     // The collection of session entities overrides the collection of entities
-    // in the corresponding custom entity type.
+    // in the corresponding developer entity type.
     ENTITY_OVERRIDE_MODE_OVERRIDE = 1;
 
     // The collection of session entities extends the collection of entities in
-    // the corresponding custom entity type.
+    // the corresponding developer entity type.
     //
     // Note: Even in this override mode calls to `ListSessionEntityTypes`,
     // `GetSessionEntityType`, `CreateSessionEntityType` and
     // `UpdateSessionEntityType` only return the additional entities added in
     // this session entity type. If you want to get the supplemented list,
-    // please call [EntityTypes.GetEntityType][google.cloud.dialogflow.v2beta1.EntityTypes.GetEntityType] on the custom entity type
+    // please call [EntityTypes.GetEntityType][google.cloud.dialogflow.v2beta1.EntityTypes.GetEntityType] on the developer entity type
     // and merge.
     ENTITY_OVERRIDE_MODE_SUPPLEMENT = 2;
   }
@@ -207,7 +208,7 @@ message SessionEntityType {
   string name = 1;
 
   // Required. Indicates whether the additional data should override or
-  // supplement the custom entity type definition.
+  // supplement the developer entity type definition.
   EntityOverrideMode entity_override_mode = 2;
 
   // Required. The collection of entities associated with this session entity
@@ -271,7 +272,12 @@ message CreateSessionEntityTypeRequest {
 
 // The request message for [SessionEntityTypes.UpdateSessionEntityType][google.cloud.dialogflow.v2beta1.SessionEntityTypes.UpdateSessionEntityType].
 message UpdateSessionEntityTypeRequest {
-  // Required. The session entity type to update.
+  // Required. The entity type to update. Format:
+  // `projects/<Project ID>/agent/sessions/<Session ID>/entityTypes/<Entity Type
+  // Display Name>` or `projects/<Project ID>/agent/environments/<Environment
+  // ID>/users/<User ID>/sessions/<Session ID>/entityTypes/<Entity Type Display
+  // Name>`. If `Environment ID` is not specified, we assume default 'draft'
+  // environment. If `User ID` is not specified, we assume default '-' user.
   SessionEntityType session_entity_type = 1;
 
   // Optional. The mask to control which fields get updated.
