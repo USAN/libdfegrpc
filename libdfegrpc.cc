@@ -241,9 +241,14 @@ static void make_query_result_responses(struct dialogflow_session *session, cons
     if (query_result.has_diagnostic_info()) {
         const ::google::protobuf::Struct& diagnostic_info = query_result.diagnostic_info();
         const ::google::protobuf::Map<std::string, ::google::protobuf::Value>& fields = diagnostic_info.fields();
-        const ::google::protobuf::Value& end = fields.at("end_conversation");
-        if (end.bool_value()) {
-            session->results.push_back(std::unique_ptr<df_result>(new df_result("end_conversation", "1", score)));
+        for (::google::protobuf::Map<std::string, ::google::protobuf::Value>::const_iterator iterator = fields.begin(); iterator != fields.end(); ++iterator) {
+            const ::google::protobuf::Map<std::string, ::google::protobuf::Value>::value_type value = *iterator;
+            if (value.first == "end_conversation") {
+                const ::google::protobuf::Value& end = value.second;
+                if (end.bool_value()) {
+                    session->results.push_back(std::unique_ptr<df_result>(new df_result("end_conversation", "1", score)));
+                }
+            }
         }
     }
 
