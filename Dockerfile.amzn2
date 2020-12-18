@@ -1,0 +1,23 @@
+FROM amazonlinux:2
+
+LABEL maintainer="daniel.collins@usan.com"
+
+RUN amazon-linux-extras install ruby2.6 && \
+    yum install -y \
+        autoconf \
+        binutils \
+        gcc \
+        gcc-c++ \
+        gem \
+        git \
+        make \
+        libtool \
+        rpm-build \
+        ruby \
+        ruby-devel \
+        wget
+
+ENV GEM_HOME=/usr
+ENV GEM_PATH=/usr
+
+RUN gem install fpm
