@@ -2,22 +2,24 @@ FROM amazonlinux:2
 
 LABEL maintainer="daniel.collins@usan.com"
 
-RUN amazon-linux-extras install ruby2.6 && \
+# using ruby 2.4 because fpm didn't want to work with 2.6
+# we should try newer versions when they are available.
+RUN amazon-linux-extras install ruby2.4 && \
     yum install -y \
         autoconf \
         binutils \
         gcc \
         gcc-c++ \
-        gem \
         git \
         make \
         libtool \
         rpm-build \
         ruby \
         ruby-devel \
-        wget
+        wget \
+        which
 
 ENV GEM_HOME=/usr
 ENV GEM_PATH=/usr
 
-RUN gem install fpm
+RUN gem install --no-rdoc --no-ri fpm
